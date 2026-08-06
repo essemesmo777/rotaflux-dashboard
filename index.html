@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101b1a">
+  <meta name="description" content="RotaFlux — gestão inteligente de custos, consumo e resultado por rota.">
+  <title>RotaFlux — Gestão de Rotas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <style>
+    :root {
+      --ink: #182220;
+      --muted: #6f7c78;
+      --soft: #eef0ea;
+      --line: #e4e7df;
+      --surface: #ffffff;
+      --canvas: #f3f4ef;
+      --sidebar: #101b1a;
+      --sidebar-soft: #172725;
+      --accent: #e8ff77;
+      --accent-strong: #c7ea31;
+      --green: #11875d;
+      --green-soft: #e1f5ec;
+      --red: #d64949;
+      --red-soft: #fde9e7;
+      --amber: #c77b16;
+      --amber-soft: #fff0d7;
+      --blue: #3769d4;
+      --blue-soft: #e8efff;
+      --shadow: 0 12px 34px rgba(27, 41, 37, .07);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: "DM Sans", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 3px solid rgba(199, 234, 49, .45);
+      outline-offset: 2px;
+    }
+    .hidden { display: none !important; }
+    .app { min-height: 100vh; }
+
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 40;
+      width: 244px;
+      padding: 26px 18px 20px;
+      display: flex;
+      flex-direction: column;
+      color: #f6faf5;
+      background:
+        radial-gradient(circle at 14% 12%, rgba(232,255,119,.08), transparent 28%),
+        var(--sidebar);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 0 9px 26px;
+      font: 800 20px/1 "Manrope", sans-serif;
+      letter-spacing: -.5px;
+    }
+    .brand-mark {
+      width: 34px; height: 34px;
+      border-radius: 10px;
+      display: grid; place-items: center;
+      background: var(--accent);
+      color: var(--sidebar);
+      box-shadow: 0 0 0 5px rgba(232,255,119,.08);
+    }
+    .brand-mark svg { width: 19px; height: 19px; stroke-width: 2.5; }
+    .nav-label {
+      padding: 5px 12px 10px;
+      color: #7f918d;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    .nav { display: grid; gap: 5px; }
+    .nav-btn {
+      border: 0;
+      width: 100%;
+      height: 44px;
+      border-radius: 11px;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #aebbb8;
+      background: transparent;
+      cursor: pointer;
+      font-weight: 600;
+      text-align: left;
+      transition: .18s ease;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,.045); color: white; }
+    .nav-btn.active { background: var(--sidebar-soft); color: white; }
+    .nav-btn.active svg { color: var(--accent); }
+    .nav-btn svg { width: 18px; height: 18px; }
+    .nav-count {
+      margin-left: auto;
+      min-width: 22px;
+      padding: 3px 6px;
+      border-radius: 7px;
+      color: var(--sidebar);
+      background: var(--accent);
+      font-size: 10px;
+      font-weight: 800;
+      text-align: center;
+    }
+    .sidebar-foot { margin-top: auto; }
+    .support-card {
+      margin: 0 4px 14px;
+      padding: 15px;
+      border: 1px solid rgba(255,255,255,.075);
+      border-radius: 14px;
+      background: rgba(255,255,255,.035);
+    }
+    .support-card strong { display: block; font-size: 13px; margin-bottom: 6px; }
+    .support-card p { margin: 0 0 12px; color: #8fa09c; font-size: 11px; line-height: 1.45; }
+    .support-card button {
+      border: 0; padding: 0; color: var(--accent); background: transparent;
+      font-size: 11px; font-weight: 700; cursor: pointer;
+    }
+    .profile {
+      position: relative;
+      width: 100%;
+      border: 0;
+      border-top: 1px solid rgba(255,255,255,.07);
+      padding: 17px 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: white;
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
+    }
+    .avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      display: grid; place-items: center;
+      background: #dde6d1; color: #18332c;
+      font-size: 11px; font-weight: 800;
+    }
+    .profile-meta { min-width: 0; }
+    .profile-meta strong, .profile-meta span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .profile-meta strong { font-size: 12px; }
+    .profile-meta span { color: #81928e; font-size: 10px; margin-top: 2px; }
+    .profile > svg { width: 15px; margin-left: auto; color: #71817d; }
+
+    .main { margin-left: 244px; min-height: 100vh; }
+    .topbar {
+      height: 76px;
+      padding: 0 34px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      border-bottom: 1px solid rgba(24,34,32,.065);
+      background: rgba(243,244,239,.92);
+      backdrop-filter: blur(14px);
+      position: sticky; top: 0; z-index: 30;
+    }
+    .page-title h1 { margin: 0; font: 800 20px/1.25 "Manrope", sans-serif; letter-spacing: -.5px; }
+    .page-title p { margin: 3px 0 0; color: var(--muted); font-size: 11px; }
+    .top-actions { display: flex; align-items: center; gap: 9px; }
+    .date-control, .icon-btn, .secondary-btn, .primary-btn, .ghost-btn {
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--surface);
+      cursor: pointer;
+      transition: .16s ease;
+    }
+    .date-control {
+      height: 40px; padding: 0 12px;
+      display: flex; align-items: center; gap: 8px;
+      color: #45514e; font-size: 11px; font-weight: 600;
+    }
+    .date-control select { border: 0; outline: 0; background: transparent; color: inherit; cursor: pointer; }
+    .date-control svg { width: 15px; }
+    .icon-btn { width: 40px; height: 40px; display: grid; place-items: center; position: relative; }
+    .icon-btn:hover, .secondary-btn:hover { transform: translateY(-1px); box-shadow: 0 5px 15px rgba(31,45,41,.07); }
+    .icon-btn svg { width: 17px; height: 17px; }
+    .notify-dot { position: absolute; top: 9px; right: 9px; width: 6px; height: 6px; border: 2px solid white; border-radius: 50%; background: #f07262; }
+    .mobile-menu { display: none; }
+
+    .content { padding: 27px 34px 45px; max-width: 1540px; margin: 0 auto; }
+    .view { display: none; animation: fadeUp .24s ease; }
+    .view.active { display: block; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    .section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 19px; }
+    .section-head h2 { margin: 0; font: 800 22px/1.2 "Manrope", sans-serif; letter-spacing: -.7px; }
+    .section-head p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+    .head-actions { display: flex; gap: 9px; }
+    .primary-btn, .secondary-btn, .ghost-btn {
+      min-height: 40px; padding: 0 15px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      font-size: 11px; font-weight: 700;
+    }
+    .primary-btn { border-color: var(--sidebar); color: white; background: var(--sidebar); }
+    .primary-btn:hover { background: #1a2b29; transform: translateY(-1px); }
+    .primary-btn.accent { border-color: var(--accent); color: var(--sidebar); background: var(--accent); }
+    .primary-btn.accent:hover { background: var(--accent-strong); }
+    .secondary-btn { color: #33413e; background: white; }
+    .ghost-btn { min-height: 34px; border-color: transparent; background: transparent; color: var(--muted); }
+    .primary-btn svg, .secondary-btn svg, .ghost-btn svg { width: 15px; height: 15px; }
+
+    .hero-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(300px, .85fr); gap: 15px; margin-bottom: 15px; }
+    .result-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 207px;
+      padding: 25px 26px;
+      border-radius: var(--radius);
+      color: white;
+      background:
+        radial-gradient(circle at 85% 32%, rgba(232,255,119,.14), transparent 28%),
+        linear-gradient(135deg, #142421 0%, #0d1917 100%);
+      box-shadow: var(--shadow);
+    }
+    .result-card::after {
+      content: ""; position: absolute; right: -52px; bottom: -92px;
+      width: 230px; height: 230px; border: 1px solid rgba(232,255,119,.12); border-radius: 50%;
+      box-shadow: 0 0 0 25px rgba(232,255,119,.025), 0 0 0 53px rgba(232,255,119,.018);
+    }
+    .eyebrow { margin-bottom: 9px; color: #98aaa5; font-size: 10px; font-weight: 700; letter-spacing: 1.35px; text-transform: uppercase; }
+    .result-value { font: 800 35px/1 "Manrope", sans-serif; letter-spacing: -1.5px; }
+    .result-value.negative { color: #ffb0a6; }
+    .result-sub { display: flex; align-items: center; gap: 7px; margin-top: 10px; color: #a9b7b4; font-size: 11px; }
+    .trend-pill { padding: 4px 7px; border-radius: 7px; color: #173127; background: var(--accent); font-weight: 800; }
+    .result-divider { height: 1px; margin: 19px 0 15px; background: rgba(255,255,255,.08); }
+    .result-breakdown { width: min(520px, 78%); display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .result-breakdown span { display: block; color: #7e918c; font-size: 9px; letter-spacing: .4px; text-transform: uppercase; }
+    .result-breakdown strong { display: block; margin-top: 5px; font: 700 14px/1 "Manrope", sans-serif; }
+
+    .upload-card {
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .upload-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .upload-icon {
+      width: 42px; height: 42px; border-radius: 12px;
+      display: grid; place-items: center;
+      background: #f0f6d6; color: #3d4e18;
+    }
+    .upload-icon svg { width: 20px; }
+    .upload-card h3 { margin: 16px 0 5px; font: 800 17px/1.2 "Manrope", sans-serif; letter-spacing: -.35px; }
+    .upload-card p { margin: 0; min-height: 35px; color: var(--muted); font-size: 11px; line-height: 1.55; }
+    .upload-card .primary-btn { width: 100%; margin-top: 17px; }
+    .privacy-note { display: flex; align-items: center; justify-content: center; gap: 5px; margin-top: 10px; color: #8d9895; font-size: 9px; }
+    .privacy-note svg { width: 11px; }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 13px; margin-bottom: 15px; }
+    .kpi-card {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: var(--surface);
+      transition: .18s ease;
+    }
+    .kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+    .kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .kpi-icon { width: 31px; height: 31px; border-radius: 9px; display: grid; place-items: center; }
+    .kpi-icon svg { width: 15px; }
+    .kpi-icon.green { color: var(--green); background: var(--green-soft); }
+    .kpi-icon.blue { color: var(--blue); background: var(--blue-soft); }
+    .kpi-icon.amber { color: var(--amber); background: var(--amber-soft); }
+    .kpi-icon.red { color: var(--red); background: var(--red-soft); }
+    .delta { padding: 3px 6px; border-radius: 6px; color: var(--green); background: var(--green-soft); font-size: 9px; font-weight: 800; }
+    .delta.down { color: var(--red); background: var(--red-soft); }
+    .kpi-card label { display: block; margin: 12px 0 5px; color: var(--muted); font-size: 10px; font-weight: 600; }
+    .kpi-value { font: 800 20px/1 "Manrope", sans-serif; letter-spacing: -.7px; }
+    .kpi-note { margin-top: 7px; color: #97a19e; font-size: 9px; }
+
+    .analytics-grid { display: grid; grid-template-columns: minmax(0, 1.62fr) minmax(280px, .78fr); gap: 15px; margin-bottom: 15px; }
+    .panel { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: 0 5px 20px rgba(30,43,39,.035); }
+    .panel-head { padding: 19px 20px 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; }
+    .panel-head h3 { margin: 0; font: 800 14px/1.3 "Manrope", sans-serif; }
+    .panel-head p { margin: 4px 0 0; color: var(--muted); font-size: 10px; }
+    .legend { display: flex; align-items: center; gap: 13px; color: var(--muted); font-size: 9px; }
+    .legend span { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+    .legend i { width: 7px; height: 7px; border-radius: 50%; display: block; }
+    .chart-wrap { height: 240px; padding: 12px 16px 16px; }
+    .donut-content { padding: 8px 19px 19px; display: grid; grid-template-columns: 145px 1fr; align-items: center; gap: 12px; }
+    .donut-wrap { height: 145px; position: relative; }
+    .donut-center { position: absolute; inset: 0; display: grid; place-content: center; pointer-events: none; text-align: center; }
+    .donut-center strong { font: 800 17px/1 "Manrope", sans-serif; }
+    .donut-center span { margin-top: 4px; color: var(--muted); font-size: 8px; text-transform: uppercase; }
+    .cost-list { display: grid; gap: 10px; }
+    .cost-item { display: grid; grid-template-columns: 8px 1fr auto; align-items: center; gap: 8px; font-size: 9px; }
+    .cost-item i { width: 7px; height: 7px; border-radius: 3px; }
+    .cost-item span { color: var(--muted); }
+    .cost-item strong { font-size: 10px; }
+
+    .table-panel { overflow: hidden; }
+    .table-toolbar { padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; gap: 15px; border-bottom: 1px solid var(--line); }
+    .table-title h3 { margin: 0; font: 800 14px/1.2 "Manrope", sans-serif; }
+    .table-title p { margin: 4px 0 0; color: var(--muted); font-size: 9px; }
+    .toolbar-actions { display: flex; gap: 8px; }
+    .search-box { position: relative; }
+    .search-box svg { position: absolute; left: 11px; top: 50%; width: 14px; transform: translateY(-50%); color: #97a19f; pointer-events: none; }
+    .search-box input { width: 188px; height: 36px; border: 1px solid var(--line); border-radius: 10px; padding: 0 12px 0 34px; background: #fafbf8; color: var(--ink); font-size: 10px; }
+    .mini-select { height: 36px; border: 1px solid var(--line); border-radius: 10px; padding: 0 29px 0 10px; background: #fafbf8; color: #52605d; font-size: 10px; font-weight: 600; }
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th { height: 42px; padding: 0 17px; color: #8e9895; background: #fafbf8; font-size: 8px; font-weight: 800; letter-spacing: .65px; text-transform: uppercase; text-align: left; white-space: nowrap; }
+    th.sortable { cursor: pointer; }
+    th.sortable:hover { color: var(--ink); }
+    td { height: 61px; padding: 0 17px; border-top: 1px solid #edf0e9; font-size: 10px; white-space: nowrap; }
+    .route-name { display: flex; align-items: center; gap: 10px; }
+    .route-avatar { width: 31px; height: 31px; border-radius: 9px; display: grid; place-items: center; color: #3e514c; background: #edf2ea; font-size: 9px; font-weight: 800; }
+    .route-name strong, .route-name span { display: block; }
+    .route-name strong { font-size: 10px; }
+    .route-name span { margin-top: 3px; color: var(--muted); font-size: 8px; }
+    .vehicle strong, .vehicle span { display: block; }
+    .vehicle span { margin-top: 2px; color: var(--muted); font-size: 8px; }
+    .status { display: inline-flex; align-items: center; gap: 5px; padding: 5px 7px; border-radius: 7px; font-size: 8px; font-weight: 800; }
+    .status::before { content: ""; width: 5px; height: 5px; border-radius: 50%; }
+    .status.lucro { color: var(--green); background: var(--green-soft); }
+    .status.lucro::before { background: var(--green); }
+    .status.perda { color: var(--red); background: var(--red-soft); }
+    .status.perda::before { background: var(--red); }
+    .status.atencao { color: var(--amber); background: var(--amber-soft); }
+    .status.atencao::before { background: var(--amber); }
+    .money-positive { color: var(--green); font-weight: 800; }
+    .money-negative { color: var(--red); font-weight: 800; }
+    .row-actions { position: relative; }
+    .more-btn { width: 28px; height: 28px; border: 0; border-radius: 8px; display: grid; place-items: center; background: transparent; cursor: pointer; }
+    .more-btn:hover { background: var(--soft); }
+    .more-btn svg { width: 15px; }
+    .table-footer { min-height: 48px; padding: 9px 18px; display: flex; align-items: center; justify-content: space-between; gap: 15px; border-top: 1px solid var(--line); color: var(--muted); font-size: 9px; }
+    .pagination { display: flex; gap: 5px; }
+    .page-btn { min-width: 27px; height: 27px; border: 1px solid var(--line); border-radius: 8px; background: white; cursor: pointer; font-size: 9px; }
+    .page-btn.active { border-color: var(--sidebar); color: white; background: var(--sidebar); }
+    .page-btn:disabled { opacity: .35; cursor: not-allowed; }
+    .empty-state { padding: 48px 20px; text-align: center; color: var(--muted); }
+    .empty-state svg { width: 28px; margin-bottom: 8px; color: #aab4b1; }
+    .empty-state strong { display: block; color: var(--ink); font-size: 12px; }
+    .empty-state span { display: block; margin-top: 5px; font-size: 10px; }
+
+    .metric-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--line); margin-bottom: 15px; }
+    .strip-item { padding: 18px; background: var(--surface); }
+    .strip-item span { display: block; color: var(--muted); font-size: 9px; }
+    .strip-item strong { display: block; margin-top: 6px; font: 800 17px/1 "Manrope", sans-serif; }
+    .insight-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; margin-top: 15px; }
+    .insight-card { padding: 18px; border: 1px solid var(--line); border-radius: 15px; background: white; }
+    .insight-card .kpi-icon { margin-bottom: 13px; }
+    .insight-card h4 { margin: 0; font: 800 12px/1.35 "Manrope", sans-serif; }
+    .insight-card p { margin: 7px 0 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+
+    .import-layout { display: grid; grid-template-columns: minmax(300px,.82fr) minmax(0,1.18fr); gap: 15px; }
+    .dropzone {
+      min-height: 310px;
+      padding: 30px;
+      border: 1.5px dashed #cbd2c8;
+      border-radius: var(--radius);
+      display: grid; place-items: center;
+      background: rgba(255,255,255,.6);
+      text-align: center;
+      transition: .18s ease;
+      cursor: pointer;
+    }
+    .dropzone:hover, .dropzone.dragging { border-color: #71862e; background: #f7faeb; }
+    .dropzone .upload-icon { width: 54px; height: 54px; margin: 0 auto 17px; border-radius: 15px; }
+    .dropzone .upload-icon svg { width: 24px; }
+    .dropzone h3 { margin: 0; font: 800 16px/1.3 "Manrope", sans-serif; }
+    .dropzone p { max-width: 300px; margin: 8px auto 18px; color: var(--muted); font-size: 10px; line-height: 1.55; }
+    .file-types { display: flex; justify-content: center; gap: 6px; margin-top: 16px; }
+    .file-types span { padding: 4px 7px; border-radius: 6px; color: #68736f; background: #e9ece5; font-size: 8px; font-weight: 800; }
+    .history-list { padding: 10px 20px 20px; }
+    .history-item { min-height: 58px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); }
+    .history-item:last-child { border-bottom: 0; }
+    .file-icon { width: 31px; height: 31px; border-radius: 9px; display: grid; place-items: center; color: var(--green); background: var(--green-soft); }
+    .file-icon svg { width: 14px; }
+    .history-meta { flex: 1; min-width: 0; }
+    .history-meta strong, .history-meta span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .history-meta strong { font-size: 10px; }
+    .history-meta span { margin-top: 3px; color: var(--muted); font-size: 8px; }
+    .history-count { color: var(--muted); font-size: 9px; }
+
+    .settings-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(260px,.75fr); gap: 15px; }
+    .settings-form { padding: 22px; }
+    .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .field { display: grid; gap: 6px; }
+    .field label { color: #4c5956; font-size: 9px; font-weight: 800; letter-spacing: .3px; text-transform: uppercase; }
+    .field input, .field select { width: 100%; height: 42px; border: 1px solid var(--line); border-radius: 10px; padding: 0 12px; background: #fafbf8; color: var(--ink); font-size: 11px; }
+    .field small { color: var(--muted); font-size: 8px; }
+    .settings-form .primary-btn { margin-top: 19px; }
+    .preference-list { padding: 9px 20px 20px; }
+    .preference { min-height: 57px; display: flex; align-items: center; justify-content: space-between; gap: 15px; border-bottom: 1px solid var(--line); }
+    .preference:last-child { border-bottom: 0; }
+    .preference strong { display: block; font-size: 10px; }
+    .preference span { display: block; margin-top: 3px; color: var(--muted); font-size: 8px; }
+    .switch { position: relative; width: 34px; height: 19px; border: 0; border-radius: 20px; background: #dce0d9; cursor: pointer; transition: .2s; }
+    .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 13px; height: 13px; border-radius: 50%; background: white; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: .2s; }
+    .switch.on { background: var(--sidebar); }
+    .switch.on::after { transform: translateX(15px); background: var(--accent); }
+
+    .modal-backdrop { position: fixed; inset: 0; z-index: 100; padding: 20px; display: grid; place-items: center; background: rgba(6,16,14,.57); backdrop-filter: blur(5px); }
+    .modal {
+      width: min(620px, 100%); max-height: calc(100vh - 40px); overflow: auto;
+      border-radius: 20px; background: white; box-shadow: 0 30px 80px rgba(0,0,0,.25);
+      animation: modalIn .2s ease;
+    }
+    @keyframes modalIn { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }
+    .modal.small { width: min(430px, 100%); }
+    .modal-head { padding: 21px 22px 17px; display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; border-bottom: 1px solid var(--line); }
+    .modal-head h3 { margin: 0; font: 800 17px/1.2 "Manrope", sans-serif; }
+    .modal-head p { margin: 5px 0 0; color: var(--muted); font-size: 10px; }
+    .close-btn { width: 31px; height: 31px; border: 0; border-radius: 8px; display: grid; place-items: center; background: #f0f2ed; cursor: pointer; }
+    .close-btn svg { width: 15px; }
+    .modal-body { padding: 21px 22px; }
+    .modal-foot { padding: 15px 22px 21px; display: flex; justify-content: flex-end; gap: 9px; }
+    .upload-drop { min-height: 205px; padding: 25px; border: 1.5px dashed #c5cdc2; border-radius: 15px; display: grid; place-items: center; text-align: center; background: #fafbf7; cursor: pointer; }
+    .upload-drop.dragging { border-color: #75872d; background: #f5f9e7; }
+    .upload-drop h4 { margin: 13px 0 5px; font-size: 12px; }
+    .upload-drop p { margin: 0 0 15px; color: var(--muted); font-size: 9px; }
+    .mapping-summary { margin-top: 15px; padding: 13px; border-radius: 11px; color: #53605d; background: #f0f2ed; font-size: 9px; line-height: 1.55; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+    .form-grid .wide { grid-column: 1 / -1; }
+    .error-text { color: var(--red); font-size: 9px; }
+    .confirm-icon { width: 46px; height: 46px; margin-bottom: 15px; border-radius: 14px; display: grid; place-items: center; color: var(--red); background: var(--red-soft); }
+
+    .toast-stack { position: fixed; z-index: 200; right: 22px; bottom: 22px; display: grid; gap: 9px; }
+    .toast { width: min(350px, calc(100vw - 44px)); padding: 13px 14px; border: 1px solid var(--line); border-radius: 12px; display: flex; align-items: flex-start; gap: 10px; background: white; box-shadow: 0 15px 45px rgba(20,36,31,.16); animation: toastIn .22s ease; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .toast-icon { width: 25px; height: 25px; flex: 0 0 auto; border-radius: 7px; display: grid; place-items: center; color: var(--green); background: var(--green-soft); }
+    .toast.error .toast-icon { color: var(--red); background: var(--red-soft); }
+    .toast-icon svg { width: 13px; }
+    .toast strong { display: block; font-size: 10px; }
+    .toast span { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; line-height: 1.35; }
+
+    .profile-menu { position: fixed; z-index: 90; left: 18px; bottom: 76px; width: 208px; padding: 7px; border: 1px solid #2a3936; border-radius: 12px; color: white; background: #172421; box-shadow: 0 16px 40px rgba(0,0,0,.22); }
+    .profile-menu button { width: 100%; height: 36px; padding: 0 10px; border: 0; border-radius: 8px; display: flex; align-items: center; gap: 9px; color: #bcc8c5; background: transparent; cursor: pointer; font-size: 10px; text-align: left; }
+    .profile-menu button:hover { color: white; background: rgba(255,255,255,.05); }
+    .profile-menu svg { width: 14px; }
+
+    body.dark {
+      --ink: #edf4f1; --muted: #91a29e; --soft: #1c2927; --line: #2a3734;
+      --surface: #162220; --canvas: #101917; --shadow: 0 12px 34px rgba(0,0,0,.15);
+    }
+    body.dark .topbar { background: rgba(16,25,23,.92); }
+    body.dark .date-control, body.dark .icon-btn, body.dark .secondary-btn,
+    body.dark .kpi-card, body.dark .panel, body.dark .upload-card, body.dark .insight-card,
+    body.dark .strip-item, body.dark .modal, body.dark .toast { background: var(--surface); }
+    body.dark .search-box input, body.dark .mini-select, body.dark .field input, body.dark .field select,
+    body.dark th { background: #131e1c; color: #869793; }
+    body.dark .dropzone, body.dark .upload-drop { background: rgba(22,34,32,.7); }
+    body.dark .page-btn { background: var(--surface); color: var(--ink); }
+    body.dark .close-btn { background: #24312f; color: white; }
+
+    @media (max-width: 1120px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .hero-grid, .analytics-grid { grid-template-columns: 1fr; }
+      .upload-card { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 18px; }
+      .upload-card h3 { margin-top: 0; }
+      .upload-card .primary-btn { width: auto; margin-top: 0; }
+      .privacy-note { display: none; }
+      .metric-strip { grid-template-columns: repeat(3, 1fr); }
+      .import-layout, .settings-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 760px) {
+      .sidebar { transform: translateX(-100%); transition: .22s ease; box-shadow: 20px 0 50px rgba(0,0,0,.25); }
+      .sidebar.open { transform: none; }
+      .main { margin-left: 0; }
+      .topbar { height: 67px; padding: 0 17px; }
+      .mobile-menu { display: grid; }
+      .page-title { margin-right: auto; }
+      .page-title p, .date-control, #notificationBtn { display: none; }
+      .content { padding: 21px 16px 35px; }
+      .section-head { align-items: flex-start; }
+      .section-head h2 { font-size: 19px; }
+      .head-actions .secondary-btn span { display: none; }
+      .result-card { min-height: 225px; padding: 22px; }
+      .result-value { font-size: 30px; }
+      .result-breakdown { width: 100%; gap: 10px; }
+      .upload-card { display: block; }
+      .upload-card .primary-btn { width: 100%; margin-top: 15px; }
+      .kpi-grid { grid-template-columns: 1fr 1fr; }
+      .kpi-card { padding: 15px; }
+      .kpi-value { font-size: 17px; }
+      .analytics-grid { grid-template-columns: 1fr; }
+      .donut-content { grid-template-columns: 135px 1fr; }
+      .table-toolbar { align-items: flex-start; flex-direction: column; }
+      .toolbar-actions { width: 100%; }
+      .search-box { flex: 1; }
+      .search-box input { width: 100%; }
+      .metric-strip { grid-template-columns: repeat(2, 1fr); }
+      .insight-grid { grid-template-columns: 1fr; }
+      .field-grid, .form-grid { grid-template-columns: 1fr; }
+      .form-grid .wide { grid-column: auto; }
+      .section-head { flex-direction: column; }
+      .head-actions { width: 100%; }
+      .head-actions .primary-btn { flex: 1; }
+    }
+    @media (max-width: 440px) {
+      .kpi-grid { grid-template-columns: 1fr; }
+      .result-breakdown strong { font-size: 12px; }
+      .donut-content { grid-template-columns: 1fr; }
+      .donut-wrap { width: 150px; margin: 0 auto; }
+      .metric-strip { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar" aria-label="Navegação principal">
+      <div class="brand"><span class="brand-mark"><i data-lucide="route"></i></span> RotaFlux</div>
+      <div class="nav-label">Operação</div>
+      <nav class="nav">
+        <button class="nav-btn active" data-view="overview"><i data-lucide="layout-dashboard"></i> Visão geral</button>
+        <button class="nav-btn" data-view="routes"><i data-lucide="map-pinned"></i> Rotas <span class="nav-count" id="navRouteCount">8</span></button>
+        <button class="nav-btn" data-view="analytics"><i data-lucide="chart-no-axes-combined"></i> Análises</button>
+        <button class="nav-btn" data-view="imports"><i data-lucide="file-spreadsheet"></i> Importações</button>
+      </nav>
+      <div class="nav-label" style="margin-top:24px">Sistema</div>
+      <nav class="nav">
+        <button class="nav-btn" data-view="settings"><i data-lucide="settings-2"></i> Configurações</button>
+        <button class="nav-btn" id="helpBtn"><i data-lucide="circle-help"></i> Central de ajuda</button>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="support-card">
+          <strong>Precisa de ajuda?</strong>
+          <p>Baixe nosso modelo para importar seus dados sem erros.</p>
+          <button id="downloadTemplateSide">Baixar modelo →</button>
+        </div>
+        <button class="profile" id="profileBtn" aria-expanded="false">
+          <span class="avatar">RB</span>
+          <span class="profile-meta"><strong>Rank Brum</strong><span>Admin</span></span>
+          <i data-lucide="chevrons-up-down"></i>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="icon-btn mobile-menu" id="mobileMenuBtn" aria-label="Abrir menu"><i data-lucide="menu"></i></button>
+        <div class="page-title"><h1 id="topTitle">Visão operacional</h1><p id="currentDateLabel">Acompanhe os números da sua operação em tempo real.</p></div>
+        <div class="top-actions">
+          <label class="date-control"><i data-lucide="calendar-days"></i><select id="periodFilter" aria-label="Filtrar período"><option value="today">Hoje</option><option value="7d">Últimos 7 dias</option><option value="30d" selected>Últimos 30 dias</option><option value="all">Todo o período</option></select></label>
+          <button class="icon-btn" id="themeBtn" aria-label="Alternar tema"><i data-lucide="moon"></i></button>
+          <button class="icon-btn" id="notificationBtn" aria-label="Notificações"><i data-lucide="bell"></i><span class="notify-dot"></span></button>
+        </div>
+      </header>
+
+      <div class="content">
+        <section class="view active" id="view-overview">
+          <div class="section-head">
+            <div><h2>Bom dia, Rank.</h2><p>Seu resultado está saudável. Duas rotas precisam de atenção hoje.</p></div>
+            <div class="head-actions"><button class="secondary-btn" id="exportOverview"><i data-lucide="download"></i><span>Exportar relatório</span></button><button class="primary-btn" data-open-upload><i data-lucide="upload"></i> Importar planilha</button></div>
+          </div>
+          <div class="hero-grid">
+            <article class="result-card">
+              <div class="eyebrow">Resultado líquido do período</div>
+              <div class="result-value" id="heroResult">R$ 0,00</div>
+              <div class="result-sub"><span class="trend-pill" id="heroMargin">0%</span><span>de margem sobre a receita total</span></div>
+              <div class="result-divider"></div>
+              <div class="result-breakdown"><div><span>Receita</span><strong id="heroRevenue">R$ 0,00</strong></div><div><span>Custos totais</span><strong id="heroCost">R$ 0,00</strong></div><div><span>Rotas analisadas</span><strong id="heroRoutes">0 rotas</strong></div></div>
+            </article>
+            <article class="upload-card">
+              <div><div class="upload-card-top"><span class="upload-icon"><i data-lucide="file-up"></i></span><span class="status lucro">Pronto para importar</span></div><h3>Atualize sua operação</h3><p>Envie uma planilha Excel ou CSV. Os indicadores serão recalculados automaticamente.</p></div>
+              <div><button class="primary-btn accent" data-open-upload><i data-lucide="upload-cloud"></i> Selecionar planilha</button><div class="privacy-note"><i data-lucide="shield-check"></i> Processamento seguro no seu navegador</div></div>
+            </article>
+          </div>
+          <div class="kpi-grid">
+            <article class="kpi-card"><div class="kpi-top"><span class="kpi-icon green"><i data-lucide="wallet-cards"></i></span><span class="delta">+8,4%</span></div><label>Receita total</label><div class="kpi-value" id="kpiRevenue">R$ 0</div><div class="kpi-note">valor recebido pelas rotas</div></article>
+            <article class="kpi-card"><div class="kpi-top"><span class="kpi-icon amber"><i data-lucide="fuel"></i></span><span class="delta down">+2,1%</span></div><label>Gasto com diesel</label><div class="kpi-value" id="kpiDiesel">R$ 0</div><div class="kpi-note" id="kpiLiters">0 litros consumidos</div></article>
+            <article class="kpi-card"><div class="kpi-top"><span class="kpi-icon blue"><i data-lucide="milestone"></i></span><span class="delta">+5,7%</span></div><label>Quilometragem</label><div class="kpi-value" id="kpiKm">0 km</div><div class="kpi-note" id="kpiCostKm">R$ 0,00 de custo por km</div></article>
+            <article class="kpi-card"><div class="kpi-top"><span class="kpi-icon red"><i data-lucide="trending-down"></i></span><span class="delta" id="lossDelta">Sob controle</span></div><label>Perdas identificadas</label><div class="kpi-value" id="kpiLoss">R$ 0</div><div class="kpi-note" id="kpiLossRoutes">0 rotas com prejuízo</div></article>
+          </div>
+          <div class="analytics-grid">
+            <article class="panel"><div class="panel-head"><div><h3>Receita x custos</h3><p>Evolução diária da operação</p></div><div class="legend"><span><i style="background:#152522"></i> Receita</span><span><i style="background:#cbea43"></i> Custos</span></div></div><div class="chart-wrap"><canvas id="performanceChart"></canvas></div></article>
+            <article class="panel"><div class="panel-head"><div><h3>Composição dos custos</h3><p>Distribuição no período</p></div></div><div class="donut-content"><div class="donut-wrap"><canvas id="costChart"></canvas><div class="donut-center"><strong id="donutTotal">R$ 0</strong><span>Total</span></div></div><div class="cost-list" id="costLegend"></div></div></article>
+          </div>
+          <article class="panel table-panel"><div class="table-toolbar"><div class="table-title"><h3>Desempenho das rotas</h3><p>Visão detalhada por veículo e operação</p></div><div class="toolbar-actions"><label class="search-box"><i data-lucide="search"></i><input id="overviewSearch" placeholder="Buscar rota ou placa" aria-label="Buscar rotas"></label><select class="mini-select" id="overviewStatus"><option value="all">Todos os status</option><option value="lucro">Com lucro</option><option value="perda">Com perda</option><option value="atencao">Atenção</option></select></div></div><div id="overviewTable"></div></article>
+        </section>
+
+        <section class="view" id="view-routes">
+          <div class="section-head"><div><h2>Gestão de rotas</h2><p>Consulte, cadastre e acompanhe cada operação.</p></div><div class="head-actions"><button class="secondary-btn" id="exportRoutes"><i data-lucide="download"></i><span>Exportar dados</span></button><button class="primary-btn" id="addRouteBtn"><i data-lucide="plus"></i> Nova rota</button></div></div>
+          <div class="metric-strip"><div class="strip-item"><span>Rotas no período</span><strong id="routeMetricCount">0</strong></div><div class="strip-item"><span>Distância total</span><strong id="routeMetricKm">0 km</strong></div><div class="strip-item"><span>Consumo médio</span><strong id="routeMetricEfficiency">0 km/L</strong></div><div class="strip-item"><span>Ticket médio</span><strong id="routeMetricTicket">R$ 0</strong></div><div class="strip-item"><span>Margem média</span><strong id="routeMetricMargin">0%</strong></div></div>
+          <article class="panel table-panel"><div class="table-toolbar"><div class="table-title"><h3>Todas as rotas</h3><p>Clique nos títulos para ordenar</p></div><div class="toolbar-actions"><label class="search-box"><i data-lucide="search"></i><input id="routesSearch" placeholder="Buscar motorista, rota ou placa" aria-label="Buscar todas as rotas"></label><select class="mini-select" id="routesStatus"><option value="all">Todos os status</option><option value="lucro">Com lucro</option><option value="perda">Com perda</option><option value="atencao">Atenção</option></select></div></div><div id="routesTable"></div></article>
+        </section>
+
+        <section class="view" id="view-analytics">
+          <div class="section-head"><div><h2>Análise de desempenho</h2><p>Entenda onde sua operação ganha e onde perde dinheiro.</p></div><button class="secondary-btn" id="exportAnalytics"><i data-lucide="file-down"></i> Exportar análise</button></div>
+          <div class="metric-strip"><div class="strip-item"><span>Receita por km</span><strong id="analysisRevenueKm">R$ 0</strong></div><div class="strip-item"><span>Custo por km</span><strong id="analysisCostKm">R$ 0</strong></div><div class="strip-item"><span>Diesel médio</span><strong id="analysisDieselPrice">R$ 0</strong></div><div class="strip-item"><span>Melhor margem</span><strong id="analysisBestMargin">0%</strong></div><div class="strip-item"><span>Rotas lucrativas</span><strong id="analysisProfitable">0%</strong></div></div>
+          <div class="analytics-grid"><article class="panel"><div class="panel-head"><div><h3>Resultado por rota</h3><p>Comparação das operações mais recentes</p></div></div><div class="chart-wrap"><canvas id="routeResultChart"></canvas></div></article><article class="panel"><div class="panel-head"><div><h3>Eficiência de consumo</h3><p>Km rodado por litro</p></div></div><div class="chart-wrap"><canvas id="efficiencyChart"></canvas></div></article></div>
+          <div class="insight-grid"><article class="insight-card"><span class="kpi-icon green"><i data-lucide="badge-check"></i></span><h4 id="bestRouteTitle">Melhor rota do período</h4><p id="bestRouteText">Os dados serão analisados automaticamente.</p></article><article class="insight-card"><span class="kpi-icon red"><i data-lucide="triangle-alert"></i></span><h4 id="lossRouteTitle">Rota que exige atenção</h4><p id="lossRouteText">Os dados serão analisados automaticamente.</p></article><article class="insight-card"><span class="kpi-icon blue"><i data-lucide="lightbulb"></i></span><h4>Oportunidade de economia</h4><p id="savingText">Importe seus dados para receber recomendações baseadas na sua operação.</p></article></div>
+        </section>
+
+        <section class="view" id="view-imports">
+          <div class="section-head"><div><h2>Importar planilhas</h2><p>Atualize os indicadores usando arquivos Excel ou CSV.</p></div><button class="secondary-btn" id="downloadTemplate"><i data-lucide="file-down"></i> Baixar modelo</button></div>
+          <div class="import-layout">
+            <div class="dropzone" id="pageDropzone" tabindex="0" role="button" aria-label="Selecionar planilha"><div><span class="upload-icon"><i data-lucide="sheet"></i></span><h3>Arraste sua planilha aqui</h3><p>Ou escolha um arquivo do computador. Nós identificamos as colunas e calculamos os indicadores.</p><button class="primary-btn" type="button"><i data-lucide="folder-open"></i> Escolher arquivo</button><div class="file-types"><span>XLSX</span><span>XLS</span><span>CSV</span><span>até 10 MB</span></div></div></div>
+            <article class="panel"><div class="panel-head"><div><h3>Histórico de importações</h3><p>Arquivos processados neste navegador</p></div><span class="status lucro">Sincronizado</span></div><div class="history-list" id="historyList"></div></article>
+          </div>
+          <article class="panel" style="margin-top:15px;padding:20px"><div class="panel-head" style="padding:0"><div><h3>Como sua planilha deve estar organizada</h3><p>Não precisa usar os nomes exatos: reconhecemos variações comuns.</p></div></div><div class="insight-grid"><div class="insight-card"><span class="kpi-icon blue"><i data-lucide="calendar"></i></span><h4>Identificação</h4><p>Data, rota, placa, motorista, origem e destino.</p></div><div class="insight-card"><span class="kpi-icon amber"><i data-lucide="fuel"></i></span><h4>Operação</h4><p>Km rodado, litros consumidos, consumo médio e valor do diesel.</p></div><div class="insight-card"><span class="kpi-icon green"><i data-lucide="circle-dollar-sign"></i></span><h4>Financeiro</h4><p>Valor recebido, outros custos e resultado. O restante calculamos.</p></div></div></article>
+        </section>
+
+        <section class="view" id="view-settings">
+          <div class="section-head"><div><h2>Configurações</h2><p>Personalize os padrões usados nos cálculos.</p></div></div>
+          <div class="settings-grid">
+            <article class="panel"><div class="panel-head"><div><h3>Parâmetros da operação</h3><p>Valores usados quando a planilha não informar o campo.</p></div></div><form class="settings-form" id="settingsForm"><div class="field-grid"><label class="field"><span>Preço padrão do diesel (R$/L)</span><input type="number" id="defaultDiesel" min="0" step="0.01" required><small>Aplicado somente quando o arquivo não tiver o preço.</small></label><label class="field"><span>Consumo médio padrão (km/L)</span><input type="number" id="defaultEfficiency" min="0.1" step="0.1" required><small>Usado para estimar litros quando necessário.</small></label><label class="field"><span>Meta de margem (%)</span><input type="number" id="targetMargin" min="0" max="100" step="1" required></label><label class="field"><span>Moeda</span><select id="currency"><option value="BRL">Real brasileiro (R$)</option></select></label></div><button class="primary-btn" type="submit"><i data-lucide="save"></i> Salvar alterações</button></form></article>
+            <article class="panel"><div class="panel-head"><div><h3>Preferências</h3><p>Ajustes visuais e de análise.</p></div></div><div class="preference-list"><div class="preference"><div><strong>Modo escuro</strong><span>Reduz o brilho da interface</span></div><button class="switch" id="darkSwitch" aria-label="Alternar modo escuro"></button></div><div class="preference"><div><strong>Alertas de perda</strong><span>Destacar rotas negativas</span></div><button class="switch on" id="lossAlertSwitch" aria-label="Alternar alertas"></button></div><div class="preference"><div><strong>Salvar dados localmente</strong><span>Manter rotas neste dispositivo</span></div><button class="switch on" id="localStorageSwitch" aria-label="Alternar armazenamento"></button></div></div></article>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="hidden">
+
+  <div class="modal-backdrop hidden" id="uploadModal" role="dialog" aria-modal="true" aria-labelledby="uploadModalTitle">
+    <div class="modal"><div class="modal-head"><div><h3 id="uploadModalTitle">Importar planilha</h3><p>Excel ou CSV com até 10 MB.</p></div><button class="close-btn" data-close-modal aria-label="Fechar"><i data-lucide="x"></i></button></div><div class="modal-body"><div class="upload-drop" id="modalDropzone"><div><span class="upload-icon" style="margin:auto"><i data-lucide="upload-cloud"></i></span><h4>Solte o arquivo aqui ou clique para selecionar</h4><p>A leitura acontece no seu navegador.</p><button class="secondary-btn" type="button">Escolher planilha</button></div></div><div class="mapping-summary"><strong>Colunas reconhecidas automaticamente:</strong><br>data, rota, placa, motorista, origem, destino, km, litros, consumo, preço do diesel, receita e outros custos.</div></div><div class="modal-foot"><button class="secondary-btn" data-close-modal>Cancelar</button><button class="primary-btn" id="downloadTemplateModal"><i data-lucide="file-down"></i> Baixar modelo</button></div></div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="routeModal" role="dialog" aria-modal="true" aria-labelledby="routeModalTitle">
+    <div class="modal"><div class="modal-head"><div><h3 id="routeModalTitle">Nova rota</h3><p>Preencha os dados operacionais e financeiros.</p></div><button class="close-btn" data-close-modal aria-label="Fechar"><i data-lucide="x"></i></button></div><form id="routeForm"><div class="modal-body"><input type="hidden" id="routeId"><div class="form-grid"><label class="field"><span>Data</span><input type="date" id="routeDate" required></label><label class="field"><span>Nome da rota</span><input type="text" id="routeName" placeholder="Ex.: SP → Campinas" required></label><label class="field"><span>Veículo / placa</span><input type="text" id="routeVehicle" placeholder="ABC-1D23" required></label><label class="field"><span>Motorista</span><input type="text" id="routeDriver" placeholder="Nome completo" required></label><label class="field"><span>Quilômetros rodados</span><input type="number" id="routeKm" min="0.1" step="0.1" required></label><label class="field"><span>Litros consumidos</span><input type="number" id="routeLiters" min="0" step="0.1" required></label><label class="field"><span>Preço do diesel (R$/L)</span><input type="number" id="routeDieselPrice" min="0" step="0.01" required></label><label class="field"><span>Valor recebido (R$)</span><input type="number" id="routeRevenue" min="0" step="0.01" required></label><label class="field"><span>Outros custos (R$)</span><input type="number" id="routeOtherCosts" min="0" step="0.01" value="0" required></label><label class="field"><span>Status operacional</span><select id="routeOperationalStatus"><option value="Concluída">Concluída</option><option value="Em andamento">Em andamento</option><option value="Planejada">Planejada</option></select></label><div class="wide error-text hidden" id="routeFormError"></div></div></div><div class="modal-foot"><button type="button" class="secondary-btn" data-close-modal>Cancelar</button><button type="submit" class="primary-btn"><i data-lucide="check"></i> Salvar rota</button></div></form></div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle"><div class="modal small"><div class="modal-body"><span class="confirm-icon"><i data-lucide="trash-2"></i></span><h3 id="confirmTitle" style="margin:0;font:800 17px Manrope">Excluir esta rota?</h3><p style="color:var(--muted);font-size:10px;line-height:1.55">A rota será removida dos cálculos e indicadores. Essa ação não pode ser desfeita.</p></div><div class="modal-foot"><button class="secondary-btn" data-close-modal>Cancelar</button><button class="primary-btn" id="confirmDeleteBtn" style="background:var(--red);border-color:var(--red)">Excluir rota</button></div></div></div>
+
+  <div class="profile-menu hidden" id="profileMenu"><button data-profile-action="settings"><i data-lucide="settings"></i> Configurações da conta</button><button data-profile-action="dark"><i data-lucide="moon"></i> Alternar modo escuro</button><button data-profile-action="logout"><i data-lucide="log-out"></i> Sair da demonstração</button></div>
+  <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const STORAGE_KEY = 'rotaflux-data-v1';
+      const SETTINGS_KEY = 'rotaflux-settings-v1';
+      const HISTORY_KEY = 'rotaflux-import-history-v1';
+      const PAGE_SIZE = 6;
+
+      const today = new Date();
+      const isoDaysAgo = (days) => { const d = new Date(today); d.setDate(d.getDate() - days); return d.toISOString().slice(0,10); };
+      const sampleRoutes = [
+        { id:'rt-101', date:isoDaysAgo(0), route:'São Paulo → Campinas', vehicle:'FTR-4H21', driver:'Marcos Silva', origin:'São Paulo', destination:'Campinas', km:188, liters:43.8, dieselPrice:6.19, revenue:1380, otherCosts:285, operationalStatus:'Concluída' },
+        { id:'rt-102', date:isoDaysAgo(0), route:'Sorocaba → Jundiaí', vehicle:'RKT-8B14', driver:'André Santos', origin:'Sorocaba', destination:'Jundiaí', km:124, liters:31.2, dieselPrice:6.14, revenue:920, otherCosts:246, operationalStatus:'Concluída' },
+        { id:'rt-103', date:isoDaysAgo(1), route:'São Paulo → Santos', vehicle:'DLS-2E90', driver:'João Oliveira', origin:'São Paulo', destination:'Santos', km:168, liters:48.5, dieselPrice:6.22, revenue:820, otherCosts:540, operationalStatus:'Concluída' },
+        { id:'rt-104', date:isoDaysAgo(2), route:'Guarulhos → Limeira', vehicle:'NVG-7A33', driver:'Paulo Lima', origin:'Guarulhos', destination:'Limeira', km:324, liters:76.4, dieselPrice:6.08, revenue:1920, otherCosts:468, operationalStatus:'Concluída' },
+        { id:'rt-105', date:isoDaysAgo(3), route:'Campinas → Ribeirão Preto', vehicle:'FTR-4H21', driver:'Marcos Silva', origin:'Campinas', destination:'Ribeirão Preto', km:448, liters:104.7, dieselPrice:6.15, revenue:2380, otherCosts:612, operationalStatus:'Concluída' },
+        { id:'rt-106', date:isoDaysAgo(5), route:'Santos → São José dos Campos', vehicle:'MPT-9C42', driver:'Lucas Rocha', origin:'Santos', destination:'São José dos Campos', km:352, liters:88.9, dieselPrice:6.29, revenue:1640, otherCosts:980, operationalStatus:'Concluída' },
+        { id:'rt-107', date:isoDaysAgo(8), route:'Osasco → Piracicaba', vehicle:'RKT-8B14', driver:'André Santos', origin:'Osasco', destination:'Piracicaba', km:336, liters:78.1, dieselPrice:6.11, revenue:1850, otherCosts:458, operationalStatus:'Concluída' },
+        { id:'rt-108', date:isoDaysAgo(12), route:'Jundiaí → Bauru', vehicle:'DLS-2E90', driver:'João Oliveira', origin:'Jundiaí', destination:'Bauru', km:568, liters:138.6, dieselPrice:6.18, revenue:2920, otherCosts:790, operationalStatus:'Concluída' },
+        { id:'rt-109', date:isoDaysAgo(16), route:'Barueri → Taubaté', vehicle:'NVG-7A33', driver:'Paulo Lima', origin:'Barueri', destination:'Taubaté', km:330, liters:81.2, dieselPrice:6.23, revenue:1740, otherCosts:535, operationalStatus:'Concluída' },
+        { id:'rt-110', date:isoDaysAgo(23), route:'São Paulo → Araraquara', vehicle:'MPT-9C42', driver:'Lucas Rocha', origin:'São Paulo', destination:'Araraquara', km:548, liters:132.4, dieselPrice:6.09, revenue:2810, otherCosts:755, operationalStatus:'Concluída' }
+      ];
+
+      const defaultSettings = { dieselPrice:6.19, efficiency:4.2, targetMargin:20, dark:false, lossAlerts:true, persist:true };
+      let settings = { ...defaultSettings, ...safeJSON(localStorage.getItem(SETTINGS_KEY), {}) };
+      let routes = safeJSON(localStorage.getItem(STORAGE_KEY), sampleRoutes);
+      if (!Array.isArray(routes) || !routes.length) routes = [...sampleRoutes];
+      let importHistory = safeJSON(localStorage.getItem(HISTORY_KEY), [
+        { name:'rotas_julho.xlsx', date:'Hoje, 08:42', rows:32 },
+        { name:'operacao_semana_29.csv', date:'29 jul, 17:18', rows:18 }
+      ]);
+      let currentView = 'overview';
+      let currentPage = { overview:1, routes:1 };
+      let sortState = { key:'date', dir:'desc' };
+      let pendingDeleteId = null;
+      let charts = {};
+
+      function safeJSON(value, fallback) { try { return value ? JSON.parse(value) : fallback; } catch { return fallback; } }
+      function persist() {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        if (settings.persist) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(routes));
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(importHistory));
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem(HISTORY_KEY);
+        }
+      }
+      const money = (n, digits=0) => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:digits,maximumFractionDigits:digits}).format(Number(n)||0);
+      const number = (n, digits=0) => new Intl.NumberFormat('pt-BR',{minimumFractionDigits:digits,maximumFractionDigits:digits}).format(Number(n)||0);
+      const shortMoney = n => Math.abs(n) >= 1000 ? 'R$ ' + number(n/1000,1) + ' mil' : money(n,0);
+      const parseNumber = value => {
+        if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+        if (value == null || value === '') return 0;
+        let s = String(value).replace(/R\$|km|litros?|l\b/gi,'').trim().replace(/\s/g,'');
+        if (s.includes(',') && s.includes('.')) s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g,'').replace(',','.') : s.replace(/,/g,'');
+        else if (s.includes(',')) s = s.replace(',','.');
+        const n = Number(s.replace(/[^0-9.-]/g,''));
+        return Number.isFinite(n) ? n : 0;
+      };
+      const norm = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+      const escapeHtml = s => String(s??'').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+
+      function computed(r) {
+        const km = parseNumber(r.km), liters = parseNumber(r.liters) || (km / (parseNumber(r.efficiency)||settings.efficiency));
+        const dieselPrice = parseNumber(r.dieselPrice) || settings.dieselPrice;
+        const dieselCost = liters * dieselPrice;
+        const cost = dieselCost + parseNumber(r.otherCosts);
+        const revenue = parseNumber(r.revenue);
+        const result = revenue - cost;
+        const margin = revenue ? result / revenue * 100 : 0;
+        const status = result < 0 ? 'perda' : margin < settings.targetMargin ? 'atencao' : 'lucro';
+        return { ...r, km, liters, dieselPrice, dieselCost, cost, revenue, result, margin, efficiency:liters ? km/liters : 0, status };
+      }
+      function filteredRoutes() {
+        const period = document.getElementById('periodFilter').value;
+        const now = new Date(); now.setHours(23,59,59,999);
+        return routes.map(computed).filter(r => {
+          if (period === 'all') return true;
+          const date = new Date(r.date + 'T12:00:00');
+          const days = period === 'today' ? 0 : period === '7d' ? 7 : 30;
+          const threshold = new Date(now); threshold.setDate(threshold.getDate()-days); threshold.setHours(0,0,0,0);
+          return period === 'today' ? date.toDateString() === now.toDateString() : date >= threshold;
+        });
+      }
+      function totals(data) {
+        return data.reduce((a,r) => { a.revenue+=r.revenue; a.diesel+=r.dieselCost; a.other+=parseNumber(r.otherCosts); a.cost+=r.cost; a.result+=r.result; a.km+=r.km; a.liters+=r.liters; if(r.result<0){a.loss+=Math.abs(r.result);a.lossCount++} return a; }, {revenue:0,diesel:0,other:0,cost:0,result:0,km:0,liters:0,loss:0,lossCount:0});
+      }
+
+      function updateDashboard() {
+        const data = filteredRoutes();
+        const t = totals(data); const margin = t.revenue ? t.result/t.revenue*100 : 0;
+        setText('heroResult', money(t.result,2));
+        document.getElementById('heroResult').classList.toggle('negative',t.result<0);
+        setText('heroMargin', number(margin,1)+'%'); setText('heroRevenue',money(t.revenue,0)); setText('heroCost',money(t.cost,0)); setText('heroRoutes',data.length+' rotas');
+        setText('kpiRevenue',money(t.revenue,0)); setText('kpiDiesel',money(t.diesel,0)); setText('kpiLiters',number(t.liters,0)+' litros consumidos'); setText('kpiKm',number(t.km,0)+' km'); setText('kpiCostKm',money(t.km?t.cost/t.km:0,2)+' de custo por km'); setText('kpiLoss',money(t.loss,0)); setText('kpiLossRoutes',t.lossCount+' '+(t.lossCount===1?'rota com prejuízo':'rotas com prejuízo'));
+        setText('navRouteCount',routes.length); setText('donutTotal',shortMoney(t.cost));
+        setText('routeMetricCount',data.length); setText('routeMetricKm',number(t.km,0)+' km'); setText('routeMetricEfficiency',number(t.liters?t.km/t.liters:0,1)+' km/L'); setText('routeMetricTicket',money(data.length?t.revenue/data.length:0,0)); setText('routeMetricMargin',number(margin,1)+'%');
+        setText('analysisRevenueKm',money(t.km?t.revenue/t.km:0,2)); setText('analysisCostKm',money(t.km?t.cost/t.km:0,2)); setText('analysisDieselPrice',money(t.liters?t.diesel/t.liters:0,2));
+        const margins = data.map(r=>r.margin); setText('analysisBestMargin',number(margins.length?Math.max(...margins):0,1)+'%'); setText('analysisProfitable',number(data.length?data.filter(r=>r.result>0).length/data.length*100:0,0)+'%');
+        updateInsights(data,t); renderTables(); renderCharts(data,t); renderHistory();
+      }
+      function setText(id,text){ const el=document.getElementById(id); if(el) el.textContent=text; }
+
+      function updateInsights(data,t) {
+        if (!data.length) return;
+        const best=[...data].sort((a,b)=>b.result-a.result)[0], worst=[...data].sort((a,b)=>a.result-b.result)[0];
+        setText('bestRouteTitle',best.route+' lidera o resultado'); setText('bestRouteText',`Gerou ${money(best.result,0)} de resultado, com margem de ${number(best.margin,1)}%.`);
+        setText('lossRouteTitle',worst.result<0?worst.route+' está no vermelho':worst.route+' tem a menor margem'); setText('lossRouteText',worst.result<0?`Perda de ${money(Math.abs(worst.result),0)}. Revise custos e valor contratado.`:`Margem de ${number(worst.margin,1)}%, abaixo das demais operações.`);
+        const inefficient=data.filter(r=>r.efficiency<settings.efficiency); const litersGap=inefficient.reduce((sum,r)=>sum+Math.max(0,r.liters-r.km/settings.efficiency),0);
+        setText('savingText',inefficient.length?`${inefficient.length} rota(s) abaixo de ${number(settings.efficiency,1)} km/L. Recuperar a média economizaria cerca de ${money(litersGap*(t.liters?t.diesel/t.liters:settings.dieselPrice),0)}.`:'Todas as rotas estão dentro da meta de consumo configurada.');
+      }
+
+      function tableData(kind) {
+        const search = (document.getElementById(kind==='overview'?'overviewSearch':'routesSearch').value||'').toLowerCase();
+        const status = document.getElementById(kind==='overview'?'overviewStatus':'routesStatus').value;
+        return filteredRoutes().filter(r => (!search || [r.route,r.vehicle,r.driver,r.origin,r.destination].some(x=>String(x||'').toLowerCase().includes(search))) && (status==='all'||r.status===status)).sort((a,b)=>{
+          let av=a[sortState.key], bv=b[sortState.key]; if(typeof av==='string') return sortState.dir==='asc'?String(av).localeCompare(String(bv)):String(bv).localeCompare(String(av));
+          return sortState.dir==='asc'?av-bv:bv-av;
+        });
+      }
+      function renderTables() { renderTable('overview'); renderTable('routes'); }
+      function renderTable(kind) {
+        const target=document.getElementById(kind+'Table'); const data=tableData(kind); const maxPage=Math.max(1,Math.ceil(data.length/PAGE_SIZE)); currentPage[kind]=Math.min(currentPage[kind],maxPage); const start=(currentPage[kind]-1)*PAGE_SIZE; const page=data.slice(start,start+PAGE_SIZE);
+        if(!data.length){ target.innerHTML=`<div class="empty-state"><i data-lucide="search-x"></i><strong>Nenhuma rota encontrada</strong><span>Ajuste a busca ou importe uma nova planilha.</span></div>`; refreshIcons(); return; }
+        const heads=[['date','Data'],['route','Rota'],['vehicle','Veículo'],['km','Km'],['liters','Diesel'],['revenue','Receita'],['cost','Custo'],['result','Resultado'],['status','Status']];
+        target.innerHTML=`<div class="table-scroll"><table><thead><tr>${heads.map(([k,l])=>`<th class="sortable" data-sort="${k}">${l}${sortState.key===k?(sortState.dir==='asc'?' ↑':' ↓'):''}</th>`).join('')}<th>Ações</th></tr></thead><tbody>${page.map(r=>`<tr><td>${formatDate(r.date)}</td><td><div class="route-name"><span class="route-avatar">${initials(r.origin,r.destination)}</span><div><strong>${escapeHtml(r.route)}</strong><span>${escapeHtml(r.driver)}</span></div></div></td><td><div class="vehicle"><strong>${escapeHtml(r.vehicle)}</strong><span>${escapeHtml(r.operationalStatus||'Concluída')}</span></div></td><td>${number(r.km,0)} km</td><td>${number(r.liters,1)} L<br><span style="color:var(--muted);font-size:8px">${money(r.dieselPrice,2)}/L</span></td><td>${money(r.revenue,0)}</td><td>${money(r.cost,0)}</td><td class="${r.result>=0?'money-positive':'money-negative'}">${r.result>=0?'+':''}${money(r.result,0)}</td><td><span class="status ${r.status}">${r.status==='lucro'?'Lucro':r.status==='perda'?'Perda':'Atenção'}</span></td><td class="row-actions"><button class="more-btn" data-edit="${r.id}" aria-label="Editar rota"><i data-lucide="pencil"></i></button><button class="more-btn" data-delete="${r.id}" aria-label="Excluir rota"><i data-lucide="trash-2"></i></button></td></tr>`).join('')}</tbody></table></div><div class="table-footer"><span>Exibindo ${start+1}–${Math.min(start+PAGE_SIZE,data.length)} de ${data.length} rotas</span><div class="pagination"><button class="page-btn" data-page-kind="${kind}" data-page="${currentPage[kind]-1}" ${currentPage[kind]===1?'disabled':''}>‹</button>${Array.from({length:maxPage},(_,i)=>`<button class="page-btn ${currentPage[kind]===i+1?'active':''}" data-page-kind="${kind}" data-page="${i+1}">${i+1}</button>`).join('')}<button class="page-btn" data-page-kind="${kind}" data-page="${currentPage[kind]+1}" ${currentPage[kind]===maxPage?'disabled':''}>›</button></div></div>`;
+        target.querySelectorAll('[data-sort]').forEach(el=>el.onclick=()=>{ const key=el.dataset.sort; sortState=sortState.key===key?{key,dir:sortState.dir==='asc'?'desc':'asc'}:{key,dir:'asc'}; renderTables(); });
+        target.querySelectorAll('[data-page]').forEach(el=>el.onclick=()=>{ currentPage[el.dataset.pageKind]=Number(el.dataset.page); renderTable(el.dataset.pageKind); });
+        target.querySelectorAll('[data-edit]').forEach(el=>el.onclick=()=>openRouteModal(el.dataset.edit));
+        target.querySelectorAll('[data-delete]').forEach(el=>el.onclick=()=>openDelete(el.dataset.delete));
+        refreshIcons();
+      }
+      const initials=(a,b)=>((String(a||'?')[0]||'')+(String(b||'?')[0]||'')).toUpperCase();
+      function formatDate(value){ const d=new Date(value+'T12:00:00'); return Number.isNaN(d.getTime())?escapeHtml(value):d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}).replace('.',''); }
+
+      function renderCharts(data,t) {
+        if(typeof Chart==='undefined') return;
+        const css=getComputedStyle(document.body), grid=css.getPropertyValue('--line').trim(), text=css.getPropertyValue('--muted').trim(), ink=css.getPropertyValue('--ink').trim();
+        Chart.defaults.font.family='DM Sans'; Chart.defaults.color=text;
+        const byDay={}; data.forEach(r=>{(byDay[r.date]??={revenue:0,cost:0});byDay[r.date].revenue+=r.revenue;byDay[r.date].cost+=r.cost});
+        let days=Object.keys(byDay).sort().slice(-8); if(!days.length) days=[isoDaysAgo(0)];
+        replaceChart('performanceChart',{type:'line',data:{labels:days.map(formatDate),datasets:[{label:'Receita',data:days.map(d=>byDay[d]?.revenue||0),borderColor:ink,backgroundColor:'rgba(20,37,34,.08)',borderWidth:2.2,pointRadius:3,pointBackgroundColor:ink,tension:.38,fill:true},{label:'Custos',data:days.map(d=>byDay[d]?.cost||0),borderColor:'#c4e53e',backgroundColor:'transparent',borderWidth:2.2,pointRadius:3,pointBackgroundColor:'#c4e53e',tension:.38}]},options:baseChartOptions(grid,text,true)});
+        const costs=[t.diesel,t.other*.52,t.other*.31,t.other*.17], costLabels=['Diesel','Pedágios','Manutenção','Outros'], colors=['#152522','#cbea43','#7897e8','#e7b459'];
+        replaceChart('costChart',{type:'doughnut',data:{labels:costLabels,datasets:[{data:costs,backgroundColor:colors,borderWidth:0,hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.label+': '+money(c.raw,0)}}}}});
+        document.getElementById('costLegend').innerHTML=costLabels.map((l,i)=>`<div class="cost-item"><i style="background:${colors[i]}"></i><span>${l}</span><strong>${t.cost?number(costs[i]/t.cost*100,0):0}%</strong></div>`).join('');
+        const recent=[...data].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,7).reverse();
+        replaceChart('routeResultChart',{type:'bar',data:{labels:recent.map(r=>shortRoute(r.route)),datasets:[{label:'Resultado',data:recent.map(r=>r.result),backgroundColor:recent.map(r=>r.result<0?'#e66c62':'#18312d'),borderRadius:6,borderSkipped:false}]},options:baseChartOptions(grid,text,false)});
+        replaceChart('efficiencyChart',{type:'bar',data:{labels:recent.map(r=>r.vehicle),datasets:[{label:'Km/L',data:recent.map(r=>r.efficiency),backgroundColor:'#cbea43',borderRadius:6,borderSkipped:false}]},options:{...baseChartOptions(grid,text,false),indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+number(c.raw,1)+' km/L'}}}}});
+      }
+      function baseChartOptions(grid,text,currency){ return {responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},plugins:{legend:{display:false},tooltip:{backgroundColor:'#10201d',padding:10,titleFont:{size:10},bodyFont:{size:10},callbacks:currency?{label:c=>' '+c.dataset.label+': '+money(c.raw,0)}:{} }},scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:8},color:text,maxRotation:0}},y:{grid:{color:grid},border:{display:false},ticks:{font:{size:8},color:text,callback:v=>currency?shortMoney(v):v}}}}; }
+      function replaceChart(id,config){ if(charts[id]) charts[id].destroy(); const ctx=document.getElementById(id); if(ctx) charts[id]=new Chart(ctx,config); }
+      function shortRoute(s){ const parts=String(s).split('→'); return parts.length>1?parts[0].trim().slice(0,5)+'→'+parts[1].trim().slice(0,5):String(s).slice(0,11); }
+
+      function renderHistory() {
+        const target=document.getElementById('historyList');
+        if(!importHistory.length){ target.innerHTML='<div class="empty-state"><i data-lucide="inbox"></i><strong>Nenhuma importação</strong><span>Seu histórico aparecerá aqui.</span></div>'; refreshIcons(); return; }
+        target.innerHTML=importHistory.slice(0,7).map(h=>`<div class="history-item"><span class="file-icon"><i data-lucide="file-spreadsheet"></i></span><div class="history-meta"><strong>${escapeHtml(h.name)}</strong><span>${escapeHtml(h.date)}</span></div><span class="history-count">${h.rows} linhas</span><span class="status lucro">Importado</span></div>`).join(''); refreshIcons();
+      }
+
+      const aliases = {
+        date:['data','date','dia','dt'], route:['rota','route','trajeto','viagem'], vehicle:['veiculo','placa','caminhao','carro','vehicle'], driver:['motorista','condutor','driver'], origin:['origem','saida','origin'], destination:['destino','chegada','destination'], km:['km','quilometragem','distancia','kmrodado','kms'], liters:['litros','diesel','litrosdiesel','volume','abastecimento'], efficiency:['consumo','kml','mediakml','rendimentokml'], dieselPrice:['precodiesel','valordiesel','precolitro','dieselreais','valorlitro'], revenue:['receita','valorrecebido','recebido','faturamento','frete','ganho'], otherCosts:['outroscustos','custosadicionais','pedagio','despesas','outros','custoextra'], operationalStatus:['status','situacao']
+      };
+      function detectColumns(headers){ const map={}; Object.entries(aliases).forEach(([key,list])=>{ const hit=headers.find(h=>list.some(a=>norm(h)===norm(a)||norm(h).includes(norm(a)))); if(hit) map[key]=hit; }); return map; }
+      function excelDate(v){ if(v instanceof Date)return v.toISOString().slice(0,10); if(typeof v==='number'&&window.XLSX){ const d=XLSX.SSF.parse_date_code(v); if(d)return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`; } const s=String(v||''); const match=s.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/); if(match)return `${match[3].length===2?'20'+match[3]:match[3]}-${match[2].padStart(2,'0')}-${match[1].padStart(2,'0')}`; const d=new Date(s); return Number.isNaN(d.getTime())?new Date().toISOString().slice(0,10):d.toISOString().slice(0,10); }
+      function mapRows(rows,fileName){
+        if(!rows.length) throw new Error('A planilha não possui linhas de dados.'); const headers=Object.keys(rows[0]); const map=detectColumns(headers);
+        if(!map.km || !map.revenue) throw new Error('Não encontramos as colunas de quilometragem e valor recebido. Use o modelo disponível.');
+        const mapped=rows.map((row,i)=>{ const km=parseNumber(row[map.km]), efficiency=parseNumber(row[map.efficiency])||settings.efficiency, liters=parseNumber(row[map.liters])||(km/efficiency); const origin=map.origin?row[map.origin]:''; const destination=map.destination?row[map.destination]:''; return { id:'imp-'+Date.now()+'-'+i, date:excelDate(map.date?row[map.date]:new Date()), route:String((map.route&&row[map.route])||[origin,destination].filter(Boolean).join(' → ')||`Rota ${i+1}`), vehicle:String((map.vehicle&&row[map.vehicle])||'Não informado'), driver:String((map.driver&&row[map.driver])||'Não informado'), origin:String(origin||'Origem'), destination:String(destination||'Destino'), km, liters, efficiency, dieselPrice:parseNumber(map.dieselPrice&&row[map.dieselPrice])||settings.dieselPrice, revenue:parseNumber(row[map.revenue]), otherCosts:parseNumber(map.otherCosts&&row[map.otherCosts]), operationalStatus:String((map.operationalStatus&&row[map.operationalStatus])||'Concluída') }; }).filter(r=>r.km>0||r.revenue>0);
+        if(!mapped.length) throw new Error('Nenhuma linha válida foi encontrada.');
+        return {mapped,recognized:Object.keys(map).length,headers:headers.length,fileName};
+      }
+      async function handleFile(file){
+        if(!file)return; if(file.size>10*1024*1024){showToast('Arquivo muito grande','O limite por importação é de 10 MB.','error');return;}
+        if(!/\.(xlsx|xls|csv)$/i.test(file.name)){showToast('Formato não aceito','Escolha um arquivo XLSX, XLS ou CSV.','error');return;}
+        try {
+          let rows=[];
+          if(/\.csv$/i.test(file.name)){ rows=parseCSV(await file.text()); }
+          else { if(typeof XLSX==='undefined') throw new Error('O leitor de Excel não carregou. Verifique sua conexão ou envie um CSV.'); const buffer=await file.arrayBuffer(); const wb=XLSX.read(buffer,{type:'array',cellDates:true}); if(!wb.SheetNames.length) throw new Error('A planilha não contém abas.'); rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''}); }
+          const result=mapRows(rows,file.name); routes=result.mapped; importHistory.unshift({name:file.name,date:'Hoje, '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),rows:result.mapped.length}); persist(); closeModals(); currentPage={overview:1,routes:1}; updateDashboard(); switchView('overview'); showToast('Planilha importada',`${result.mapped.length} rotas processadas e ${result.recognized} de ${result.headers} colunas reconhecidas.`);
+        } catch(err){ showToast('Não foi possível importar',err.message||'Revise o conteúdo do arquivo.','error'); }
+        finally { document.getElementById('fileInput').value=''; }
+      }
+      function parseCSV(text){ const lines=text.replace(/^\uFEFF/,'').split(/\r?\n/).filter(Boolean); if(!lines.length)return[]; const sep=(lines[0].match(/;/g)||[]).length>(lines[0].match(/,/g)||[]).length?';':','; const parseLine=line=>{const out=[];let cur='',quoted=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){if(quoted&&line[i+1]==='"'){cur+='"';i++;}else quoted=!quoted;}else if(c===sep&&!quoted){out.push(cur);cur='';}else cur+=c;}out.push(cur);return out;}; const headers=parseLine(lines[0]); return lines.slice(1).map(line=>Object.fromEntries(parseLine(line).map((v,i)=>[headers[i],v]))); }
+
+      function downloadTemplate(){ const csv='Data;Rota;Placa;Motorista;Origem;Destino;KM Rodado;Litros;Preço Diesel;Valor Recebido;Outros Custos;Status\n06/08/2026;São Paulo → Campinas;ABC-1D23;Marcos Silva;São Paulo;Campinas;188;43,8;6,19;1380;285;Concluída\n06/08/2026;Campinas → Sorocaba;XYZ-9E87;Ana Souza;Campinas;Sorocaba;182;42,3;6,19;1250;240;Concluída'; downloadBlob('\uFEFF'+csv,'modelo-rotaflux.csv','text/csv;charset=utf-8'); showToast('Modelo baixado','Preencha as linhas e importe o arquivo novamente.'); }
+      function exportCSV(){ const data=filteredRoutes(); if(!data.length){showToast('Nada para exportar','Não há rotas no período selecionado.','error');return;} const headers=['Data','Rota','Placa','Motorista','KM','Litros','Preço Diesel','Custo Diesel','Outros Custos','Receita','Custo Total','Resultado','Margem']; const rows=data.map(r=>[r.date,r.route,r.vehicle,r.driver,r.km,r.liters,r.dieselPrice,r.dieselCost,r.otherCosts,r.revenue,r.cost,r.result,r.margin]); const csv=[headers,...rows].map(row=>row.map(v=>'"'+String(typeof v==='number'?String(v).replace('.',','):v).replace(/"/g,'""')+'"').join(';')).join('\n'); downloadBlob('\uFEFF'+csv,'relatorio-rotaflux-'+new Date().toISOString().slice(0,10)+'.csv','text/csv;charset=utf-8'); showToast('Relatório exportado',`${data.length} rotas foram incluídas no arquivo.`); }
+      function downloadBlob(content,name,type){ const blob=new Blob([content],{type}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500); }
+
+      function openRouteModal(id){
+        document.getElementById('routeForm').reset(); document.getElementById('routeOtherCosts').value='0'; document.getElementById('routeDate').value=new Date().toISOString().slice(0,10); document.getElementById('routeDieselPrice').value=settings.dieselPrice;
+        setText('routeModalTitle',id?'Editar rota':'Nova rota'); document.getElementById('routeId').value=id||'';
+        if(id){ const r=routes.find(x=>x.id===id); if(r){ document.getElementById('routeDate').value=r.date; document.getElementById('routeName').value=r.route; document.getElementById('routeVehicle').value=r.vehicle; document.getElementById('routeDriver').value=r.driver; document.getElementById('routeKm').value=r.km; document.getElementById('routeLiters').value=r.liters; document.getElementById('routeDieselPrice').value=r.dieselPrice; document.getElementById('routeRevenue').value=r.revenue; document.getElementById('routeOtherCosts').value=r.otherCosts||0; document.getElementById('routeOperationalStatus').value=r.operationalStatus||'Concluída'; } }
+        openModal('routeModal');
+      }
+      function saveRoute(e){ e.preventDefault(); const id=document.getElementById('routeId').value; const data={id:id||'manual-'+Date.now(),date:val('routeDate'),route:val('routeName').trim(),vehicle:val('routeVehicle').trim().toUpperCase(),driver:val('routeDriver').trim(),km:parseNumber(val('routeKm')),liters:parseNumber(val('routeLiters')),dieselPrice:parseNumber(val('routeDieselPrice')),revenue:parseNumber(val('routeRevenue')),otherCosts:parseNumber(val('routeOtherCosts')),operationalStatus:val('routeOperationalStatus')}; if(!data.route||!data.vehicle||!data.driver||data.km<=0||data.liters<=0){ const err=document.getElementById('routeFormError');err.textContent='Preencha os campos obrigatórios com valores maiores que zero.';err.classList.remove('hidden');return;} const index=routes.findIndex(r=>r.id===id); if(index>=0)routes[index]=data;else routes.unshift(data); persist();closeModals();updateDashboard();showToast(id?'Rota atualizada':'Rota cadastrada',`${data.route} já foi incluída nos indicadores.`); }
+      const val=id=>document.getElementById(id).value;
+      function openDelete(id){pendingDeleteId=id;openModal('confirmModal');}
+      function confirmDelete(){ if(!pendingDeleteId)return; const r=routes.find(x=>x.id===pendingDeleteId); routes=routes.filter(x=>x.id!==pendingDeleteId); pendingDeleteId=null;persist();closeModals();updateDashboard();showToast('Rota excluída',r?`${r.route} foi removida.`:'A rota foi removida.'); }
+
+      function openModal(id){ document.getElementById(id).classList.remove('hidden'); document.body.style.overflow='hidden'; setTimeout(()=>document.getElementById(id).querySelector('button,input,select')?.focus(),30); }
+      function closeModals(){ document.querySelectorAll('.modal-backdrop').forEach(m=>m.classList.add('hidden')); document.body.style.overflow=''; document.getElementById('routeFormError').classList.add('hidden'); }
+      function showToast(title,message,type='success'){ const el=document.createElement('div');el.className='toast '+type;el.innerHTML=`<span class="toast-icon"><i data-lucide="${type==='error'?'triangle-alert':'check'}"></i></span><div><strong>${escapeHtml(title)}</strong><span>${escapeHtml(message)}</span></div>`;document.getElementById('toastStack').appendChild(el);refreshIcons();setTimeout(()=>{el.style.opacity='0';el.style.transform='translateY(8px)';setTimeout(()=>el.remove(),220)},4200); }
+
+      const titles={overview:['Visão operacional','Acompanhe os números da sua operação em tempo real.'],routes:['Gestão de rotas','Consulte as viagens, custos e resultados.'],analytics:['Análise de desempenho','Compare eficiência, margens e oportunidades.'],imports:['Importações','Envie e acompanhe suas planilhas.'],settings:['Configurações','Personalize os padrões da operação.']};
+      function switchView(view){ if(!titles[view])return;currentView=view;document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+view));document.querySelectorAll('.nav-btn[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));setText('topTitle',titles[view][0]);setText('currentDateLabel',titles[view][1]);document.getElementById('sidebar').classList.remove('open');window.scrollTo({top:0,behavior:'smooth'});if(view==='analytics')setTimeout(()=>renderCharts(filteredRoutes(),totals(filteredRoutes())),40); }
+      function applyTheme(dark){ settings.dark=dark;document.body.classList.toggle('dark',dark);document.getElementById('darkSwitch').classList.toggle('on',dark);document.getElementById('themeBtn').innerHTML=`<i data-lucide="${dark?'sun':'moon'}"></i>`;refreshIcons();persist();setTimeout(()=>renderCharts(filteredRoutes(),totals(filteredRoutes())),50); }
+      function refreshIcons(){ if(window.lucide)lucide.createIcons({attrs:{'aria-hidden':'true'}}); }
+
+      function wireEvents(){
+        document.querySelectorAll('.nav-btn[data-view]').forEach(b=>b.onclick=()=>switchView(b.dataset.view));
+        document.querySelectorAll('[data-open-upload]').forEach(b=>b.onclick=()=>openModal('uploadModal'));
+        document.querySelectorAll('[data-close-modal]').forEach(b=>b.onclick=closeModals);
+        document.querySelectorAll('.modal-backdrop').forEach(m=>m.addEventListener('mousedown',e=>{if(e.target===m)closeModals()}));
+        document.getElementById('mobileMenuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('addRouteBtn').onclick=()=>openRouteModal(); document.getElementById('routeForm').onsubmit=saveRoute; document.getElementById('confirmDeleteBtn').onclick=confirmDelete;
+        ['exportOverview','exportRoutes','exportAnalytics'].forEach(id=>document.getElementById(id).onclick=exportCSV);
+        ['downloadTemplate','downloadTemplateSide','downloadTemplateModal'].forEach(id=>document.getElementById(id).onclick=downloadTemplate);
+        ['overviewSearch','routesSearch'].forEach(id=>document.getElementById(id).oninput=()=>{currentPage[id.startsWith('overview')?'overview':'routes']=1;renderTables()});
+        ['overviewStatus','routesStatus'].forEach(id=>document.getElementById(id).onchange=()=>{currentPage[id.startsWith('overview')?'overview':'routes']=1;renderTables()});
+        document.getElementById('periodFilter').onchange=()=>{currentPage={overview:1,routes:1};updateDashboard()};
+        document.getElementById('themeBtn').onclick=()=>applyTheme(!settings.dark);document.getElementById('darkSwitch').onclick=()=>applyTheme(!settings.dark);
+        document.getElementById('lossAlertSwitch').onclick=e=>{settings.lossAlerts=!settings.lossAlerts;e.currentTarget.classList.toggle('on',settings.lossAlerts);persist();showToast('Preferência salva',settings.lossAlerts?'Alertas de perda ativados.':'Alertas de perda desativados.');};
+        document.getElementById('localStorageSwitch').onclick=e=>{settings.persist=!settings.persist;e.currentTarget.classList.toggle('on',settings.persist);persist();showToast('Preferência salva',settings.persist?'Os dados serão mantidos neste dispositivo.':'Os dados serão apagados ao fechar esta demonstração.');};
+        document.getElementById('settingsForm').onsubmit=e=>{e.preventDefault();settings.dieselPrice=parseNumber(val('defaultDiesel'));settings.efficiency=parseNumber(val('defaultEfficiency'));settings.targetMargin=parseNumber(val('targetMargin'));persist();updateDashboard();showToast('Configurações salvas','Os cálculos foram atualizados com os novos padrões.');};
+        document.getElementById('notificationBtn').onclick=()=>showToast('Operação monitorada',`${filteredRoutes().filter(r=>r.status==='perda').length} rota(s) com perda no período selecionado.`);
+        document.getElementById('helpBtn').onclick=()=>{switchView('imports');showToast('Central de ajuda','Comece pelo modelo de planilha ou envie seu próprio arquivo.');};
+        const fileInput=document.getElementById('fileInput'); fileInput.onchange=e=>handleFile(e.target.files[0]);
+        [document.getElementById('modalDropzone'),document.getElementById('pageDropzone')].forEach(zone=>{zone.onclick=()=>fileInput.click();zone.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fileInput.click()}};['dragenter','dragover'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.add('dragging')}));['dragleave','drop'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.remove('dragging')}));zone.addEventListener('drop',e=>handleFile(e.dataTransfer.files[0]));});
+        document.getElementById('profileBtn').onclick=e=>{e.stopPropagation();const m=document.getElementById('profileMenu');m.classList.toggle('hidden');e.currentTarget.setAttribute('aria-expanded',String(!m.classList.contains('hidden')))};
+        document.addEventListener('click',()=>document.getElementById('profileMenu').classList.add('hidden'));
+        document.querySelectorAll('[data-profile-action]').forEach(b=>b.onclick=e=>{e.stopPropagation();const a=b.dataset.profileAction;if(a==='settings')switchView('settings');if(a==='dark')applyTheme(!settings.dark);if(a==='logout')showToast('Modo demonstração','Nenhuma sessão real está conectada.');document.getElementById('profileMenu').classList.add('hidden')});
+        document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModals()});
+      }
+
+      function init(){
+        document.getElementById('currentDateLabel').textContent='Acompanhe os números da sua operação em tempo real.';
+        document.getElementById('defaultDiesel').value=settings.dieselPrice;document.getElementById('defaultEfficiency').value=settings.efficiency;document.getElementById('targetMargin').value=settings.targetMargin;
+        document.getElementById('lossAlertSwitch').classList.toggle('on',settings.lossAlerts);document.getElementById('localStorageSwitch').classList.toggle('on',settings.persist);
+        wireEvents();applyTheme(settings.dark);refreshIcons();updateDashboard();
+      }
+      if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+    })();
+  </script>
+</body>
+</html>
