@@ -1,55 +1,132 @@
-import { desc, eq } from "drizzle-orm";
-import { getDb } from "../../../db";
-import { routes } from "../../../db/schema";
 import { normalizeRoute } from "../../../lib/route-normalize";
+import { requireSession, responseError, supabaseFetch } from "../../../lib/supabase-rest";
 
-function errorResponse(error: unknown) {
-  const message = error instanceof Error ? error.message : "Não foi possível acessar as rotas.";
-  return Response.json({ error: message }, { status: 500 });
+type DbRoute = Record<string, unknown>;
+
+function toClient(row: DbRoute) {
+  return {
+    id: row.id,
+    importId: row.import_id ?? null,
+    date: row.date,
+    route: row.route,
+    vehicle: row.vehicle,
+    driver: row.driver,
+    origin: row.origin ?? "",
+    destination: row.destination ?? "",
+    startOdometer: row.start_odometer === null ? null : Number(row.start_odometer),
+    endOdometer: row.end_odometer === null ? null : Number(row.end_odometer),
+    km: Number(row.km ?? 0),
+    startTime: typeof row.start_time === "string" ? row.start_time.slice(0, 5) : null,
+    endTime: typeof row.end_time === "string" ? row.end_time.slice(0, 5) : null,
+    durationMinutes: Number(row.duration_minutes ?? 0),
+    liters: Number(row.liters ?? 0),
+    dieselPrice: Number(row.diesel_price ?? 0),
+    revenue: Number(row.revenue ?? 0),
+    otherCosts: Number(row.other_costs ?? 0),
+    operationalStatus: row.operational_status ?? "Concluída",
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
 
-export async function GET() {
-  try {
-    const rows = await getDb().select().from(routes).orderBy(desc(routes.date), desc(routes.createdAt)).limit(5000);
-    return Response.json({ routes: rows });
-  } catch (error) {
-    return errorResponse(error);
-  }
+function toDatabase(record: ReturnType<typeof normalizeRoute>, organizationId: string, userId: string) {
+  return {
+    id: record.id,
+    organization_id: organizationId,
+    user_id: userId,
+    import_id: record.importId,
+    date: record.date,
+    route: record.route,
+    vehicle: record.vehicle,
+    driver: record.driver,
+    origin: record.origin,
+    destination: record.destination,
+    start_odometer: record.startOdometer,
+    end_odometer: record.endOdometer,
+    km: record.km,
+    start_time: record.startTime,
+    end_time: record.endTime,
+    duration_minutes: record.durationMinutes,
+    liters: record.liters,
+    diesel_price: record.dieselPrice,
+    revenue: record.revenue,
+    other_costs: record.otherCosts,
+    operational_status: record.operationalStatus,
+    updated_at: record.updatedAt,
+  };
+}
+
+async function authenticated(request: Request) {
+  const session = await requireSession(request);
+  if (!session) return null;
+  return session;
+}
+
+export async function GET(request: Request) {
+  const session = await authenticated(request);
+  if (!session) return Response.json({ error: "Sessão expirada." }, { status: 401 });
+  const response = await supabaseFetch("/rest/v1/routes?select=*&order=date.desc,created_at.desc&limit=5000", {
+    token: session.token,
+  });
+  if (!response.ok) return Response.json({ error: await responseError(response, "Não foi possível carregar as rotas.") }, { status: 500 });
+  return Response.json({ routes: ((await response.json()) as DbRoute[]).map(toClient) });
 }
 
 export async function POST(request: Request) {
+  const session = await authenticated(request);
+  if (!session) return Response.json({ error: "Sessão expirada." }, { status: 401 });
   try {
-    const payload = (await request.json()) as Record<string, unknown>;
-    const record = normalizeRoute(payload);
-    const [created] = await getDb().insert(routes).values(record).returning();
-    return Response.json({ route: created }, { status: 201 });
+    const record = normalizeRoute((await request.json()) as Record<string, unknown>);
+    const response = await supabaseFetch("/rest/v1/routes", {
+      method: "POST",
+      token: session.token,
+      headers: { "Content-Type": "application/json", Prefer: "return=representation" },
+      body: JSON.stringify(toDatabase(record, session.profile.organization_id, session.user.id)),
+    });
+    if (!response.ok) return Response.json({ error: await responseError(response, "Não foi possível salvar a rota.") }, { status: 400 });
+    const [created] = (await response.json()) as DbRoute[];
+    return Response.json({ route: toClient(created) }, { status: 201 });
   } catch (error) {
-    return errorResponse(error);
+    return Response.json({ error: error instanceof Error ? error.message : "Não foi possível salvar a rota." }, { status: 400 });
   }
 }
 
 export async function PATCH(request: Request) {
+  const session = await authenticated(request);
+  if (!session) return Response.json({ error: "Sessão expirada." }, { status: 401 });
   try {
     const payload = (await request.json()) as Record<string, unknown>;
     const id = String(payload.id || "");
     if (!id) return Response.json({ error: "Identificador da rota ausente." }, { status: 400 });
     const record = normalizeRoute(payload, { id });
-    const { id: _id, importId: _importId, ...changes } = record;
-    const [updated] = await getDb().update(routes).set(changes).where(eq(routes.id, id)).returning();
+    const database = toDatabase(record, session.profile.organization_id, session.user.id);
+    delete (database as Partial<typeof database>).id;
+    delete (database as Partial<typeof database>).import_id;
+    const response = await supabaseFetch(`/rest/v1/routes?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      token: session.token,
+      headers: { "Content-Type": "application/json", Prefer: "return=representation" },
+      body: JSON.stringify(database),
+    });
+    if (!response.ok) return Response.json({ error: await responseError(response, "Não foi possível atualizar a rota.") }, { status: 400 });
+    const [updated] = (await response.json()) as DbRoute[];
     if (!updated) return Response.json({ error: "Rota não encontrada." }, { status: 404 });
-    return Response.json({ route: updated });
+    return Response.json({ route: toClient(updated) });
   } catch (error) {
-    return errorResponse(error);
+    return Response.json({ error: error instanceof Error ? error.message : "Não foi possível atualizar a rota." }, { status: 400 });
   }
 }
 
 export async function DELETE(request: Request) {
-  try {
-    const id = new URL(request.url).searchParams.get("id");
-    if (!id) return Response.json({ error: "Identificador da rota ausente." }, { status: 400 });
-    await getDb().delete(routes).where(eq(routes.id, id));
-    return Response.json({ ok: true });
-  } catch (error) {
-    return errorResponse(error);
-  }
+  const session = await authenticated(request);
+  if (!session) return Response.json({ error: "Sessão expirada." }, { status: 401 });
+  const id = new URL(request.url).searchParams.get("id");
+  if (!id) return Response.json({ error: "Identificador da rota ausente." }, { status: 400 });
+  const response = await supabaseFetch(`/rest/v1/routes?id=eq.${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    token: session.token,
+    headers: { Prefer: "return=minimal" },
+  });
+  if (!response.ok) return Response.json({ error: await responseError(response, "Não foi possível excluir a rota.") }, { status: 400 });
+  return Response.json({ ok: true });
 }

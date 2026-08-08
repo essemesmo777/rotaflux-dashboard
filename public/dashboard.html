@@ -538,6 +538,7 @@
       <div class="nav-label" style="margin-top:24px">Sistema</div>
       <nav class="nav">
         <button class="nav-btn" data-view="settings"><i data-lucide="settings-2"></i> Configurações</button>
+        <a class="nav-btn hidden" id="adminNav" href="/admin" target="_top" style="text-decoration:none"><i data-lucide="shield-check"></i> Gestão de usuários</a>
         <button class="nav-btn" id="helpBtn"><i data-lucide="circle-help"></i> Central de ajuda</button>
       </nav>
       <div class="sidebar-foot">
@@ -547,8 +548,8 @@
           <button id="downloadTemplateSide">Baixar modelo →</button>
         </div>
         <button class="profile" id="profileBtn" aria-expanded="false">
-          <span class="avatar">RB</span>
-          <span class="profile-meta"><strong>Rank Brum</strong><span>Admin</span></span>
+          <span class="avatar" id="profileAvatar">RB</span>
+          <span class="profile-meta"><strong id="profileName">Rank Brum</strong><span id="profileRole">Admin</span></span>
           <i data-lucide="chevrons-up-down"></i>
         </button>
       </div>
@@ -568,7 +569,7 @@
       <div class="content">
         <section class="view active" id="view-overview">
           <div class="section-head">
-            <div><h2>Bom dia, Rank.</h2><p>Seu resultado está saudável. Duas rotas precisam de atenção hoje.</p></div>
+            <div><h2 id="welcomeTitle">Bom dia, Rank.</h2><p>Seu resultado está saudável. Duas rotas precisam de atenção hoje.</p></div>
             <div class="head-actions"><button class="secondary-btn" id="exportOverview"><i data-lucide="download"></i><span>Exportar relatório</span></button><button class="primary-btn" data-open-upload><i data-lucide="upload"></i> Importar planilha</button></div>
           </div>
           <div class="hero-grid">
@@ -642,7 +643,7 @@
 
   <div class="modal-backdrop hidden" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle"><div class="modal small"><div class="modal-body"><span class="confirm-icon"><i data-lucide="trash-2"></i></span><h3 id="confirmTitle" style="margin:0;font:800 17px Manrope">Excluir esta rota?</h3><p style="color:var(--muted);font-size:10px;line-height:1.55">A rota será removida dos cálculos e indicadores. Essa ação não pode ser desfeita.</p></div><div class="modal-foot"><button class="secondary-btn" data-close-modal>Cancelar</button><button class="primary-btn" id="confirmDeleteBtn" style="background:var(--red);border-color:var(--red)">Excluir rota</button></div></div></div>
 
-  <div class="profile-menu hidden" id="profileMenu"><button data-profile-action="settings"><i data-lucide="settings"></i> Configurações da conta</button><button data-profile-action="dark"><i data-lucide="moon"></i> Alternar modo escuro</button><button data-profile-action="logout"><i data-lucide="log-out"></i> Sair da demonstração</button></div>
+  <div class="profile-menu hidden" id="profileMenu"><button data-profile-action="settings"><i data-lucide="settings"></i> Configurações da conta</button><button data-profile-action="dark"><i data-lucide="moon"></i> Alternar modo escuro</button><button data-profile-action="logout"><i data-lucide="log-out"></i> Sair da plataforma</button></div>
   <div class="toast-stack" id="toastStack" aria-live="polite"></div>
 
   <script>
@@ -895,7 +896,7 @@
         [document.getElementById('modalDropzone'),document.getElementById('pageDropzone')].forEach(zone=>{zone.onclick=()=>fileInput.click();zone.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fileInput.click()}};['dragenter','dragover'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.add('dragging')}));['dragleave','drop'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.remove('dragging')}));zone.addEventListener('drop',e=>handleFile(e.dataTransfer.files[0]));});
         document.getElementById('profileBtn').onclick=e=>{e.stopPropagation();const m=document.getElementById('profileMenu');m.classList.toggle('hidden');e.currentTarget.setAttribute('aria-expanded',String(!m.classList.contains('hidden')))};
         document.addEventListener('click',()=>document.getElementById('profileMenu').classList.add('hidden'));
-        document.querySelectorAll('[data-profile-action]').forEach(b=>b.onclick=e=>{e.stopPropagation();const a=b.dataset.profileAction;if(a==='settings')switchView('settings');if(a==='dark')applyTheme(!settings.dark);if(a==='logout')showToast('Modo demonstração','Nenhuma sessão real está conectada.');document.getElementById('profileMenu').classList.add('hidden')});
+        document.querySelectorAll('[data-profile-action]').forEach(b=>b.onclick=async e=>{e.stopPropagation();const a=b.dataset.profileAction;if(a==='settings')switchView('settings');if(a==='dark')applyTheme(!settings.dark);if(a==='logout'){await fetch('/api/auth/logout',{method:'POST'}).catch(()=>undefined);window.top.location.href='/login';return;}document.getElementById('profileMenu').classList.add('hidden')});
         document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModals()});
       }
 
@@ -903,11 +904,14 @@
         try{const [routeData,importData]=await Promise.all([apiJSON('/api/routes'),apiJSON('/api/imports')]);routes=Array.isArray(routeData.routes)?routeData.routes:[];importHistory=Array.isArray(importData.imports)?importData.imports:[];cloudReady=true;persist();currentPage={overview:1,routes:1};updateDashboard();}
         catch(err){cloudReady=false;showToast('Banco aguardando conexão','A visualização local está disponível, mas novos dados precisam do site publicado.','error');}
       }
+      async function hydrateProfile(){
+        try{const response=await fetch('/api/auth/session',{cache:'no-store'});if(!response.ok){if(response.status===401)window.top.location.href='/login';return;}const data=await response.json();const profile=data.profile||{};const name=String(profile.name||'Usuário').trim();const parts=name.split(/\s+/).filter(Boolean);const initials=(parts[0]?.[0]||'U')+(parts.length>1?(parts[parts.length-1]?.[0]||''):'');document.getElementById('profileName').textContent=name;document.getElementById('profileAvatar').textContent=initials.toUpperCase();document.getElementById('profileRole').textContent=profile.role==='SUPER_ADMIN'?'Admin':'Usuário';document.getElementById('welcomeTitle').textContent=`Bom dia, ${parts[0]||'Usuário'}.`;document.getElementById('adminNav').classList.toggle('hidden',profile.role!=='SUPER_ADMIN');}catch{}
+      }
       function init(){
         document.getElementById('currentDateLabel').textContent='Acompanhe os números da sua operação em tempo real.';
         document.getElementById('defaultDiesel').value=settings.dieselPrice;document.getElementById('defaultEfficiency').value=settings.efficiency;document.getElementById('targetMargin').value=settings.targetMargin;
         document.getElementById('lossAlertSwitch').classList.toggle('on',settings.lossAlerts);document.getElementById('localStorageSwitch').classList.add('on');
-        wireEvents();applyTheme(settings.dark);refreshIcons();updateDashboard();hydrateFromCloud();
+        wireEvents();applyTheme(settings.dark);refreshIcons();updateDashboard();hydrateProfile();hydrateFromCloud();
       }
       if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
     })();
