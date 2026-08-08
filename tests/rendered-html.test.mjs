@@ -33,14 +33,25 @@ test("server-renders the private RotaFlux access shell", async () => {
   const demoHtml = await demo.text();
   assert.match(demoHtml, /Modo demo/);
   assert.match(demoHtml, /dashboard\.html\?demo=1/);
+
+  const operations = await render("/operacoes");
+  assert.equal(operations.status, 200);
+  assert.match(await operations.text(), /Carregando operações/);
+
+  const demoOperations = await render("/demo/operacoes");
+  assert.equal(demoOperations.status, 200);
+  assert.match(await demoOperations.text(), /operations\.html\?demo=1/);
 });
 
 test("keeps documents and calculated daily trips in isolated Supabase storage", async () => {
-  const [hosting, dashboard, importsRoute, migration, home, auth] = await Promise.all([
+  const [hosting, dashboard, operations, operationsRoute, importsRoute, migration, operationsMigration, home, auth] = await Promise.all([
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../public/dashboard.html", import.meta.url), "utf8"),
+    readFile(new URL("../public/operations.html", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/operations/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/imports/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/20260808121000_saas_foundation.sql", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/20260808150000_operations_control.sql", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/supabase-rest.ts", import.meta.url), "utf8"),
   ]);
@@ -61,4 +72,17 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
   assert.match(dashboard, /endOdometer-startOdometer/);
   assert.match(dashboard, /routeDurationMinutes/);
   assert.match(dashboard, /\/api\/imports/);
+  assert.match(dashboard, /id="operationsNav"/);
+  assert.match(operations, /Tirar foto/);
+  assert.match(operations, /revise e confirme/i);
+  assert.match(operations, /pdf\.js/);
+  assert.match(operations, /Tesseract\.recognize/);
+  assert.match(operations, /allowDuplicates/);
+  assert.match(operationsRoute, /operationDuplicateKey/);
+  assert.match(operationsRoute, /Possível duplicidade/);
+  assert.match(importsRoute, /reviewed/);
+  assert.match(importsRoute, /\(xlsx\|xls\|csv\|pdf\|jpg\|jpeg\|png\)/);
+  assert.match(operationsMigration, /routes_odometer_total_check/);
+  assert.match(operationsMigration, /routes_extreme_km_justification_check/);
+  assert.match(operationsMigration, /private\.is_manager/);
 });
