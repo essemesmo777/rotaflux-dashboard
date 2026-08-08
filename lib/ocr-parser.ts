@@ -262,7 +262,10 @@ function defaultOperation(confidence: number): ExtractedOperation {
 function normalizeField(field: OperationField, value: unknown) {
   if (field === "date") return normalizeDate(value);
   if (["departureTime", "arrivalTime", "overtimeStart", "overtimeEnd"].includes(field)) return normalizeTime(value);
-  if (["startOdometer", "endOdometer", "extractedKmTotal", "refuelOdometer", "liters"].includes(field)) return numberValue(value);
+  if (["startOdometer", "endOdometer", "extractedKmTotal", "refuelOdometer", "liters"].includes(field)) {
+    if (/^([01]?\d|2[0-3])[:h.]([0-5]\d)$/.test(textValue(value))) return null;
+    return numberValue(value);
+  }
   if (field === "plate") return textValue(value).toUpperCase();
   return textValue(value);
 }
@@ -309,9 +312,9 @@ function isEmptyOrZeroRow(values: unknown[]) {
 function metadataFromText(text: string) {
   const result = { vehicle: "", plate: "", supervisor: "" };
   const patterns: Array<[keyof typeof result, RegExp]> = [
-    ["vehicle", /\b(?:ve[ií]culo|modelo|frota)\s*[:=-]\s*([^\n;|]+)/i],
+    ["vehicle", /\b(?:ve[ií]culo|modelo|frota)\s*[:=-]\s*([^\n;|\t]+)/i],
     ["plate", /\bplaca(?:\s+do\s+ve[ií]culo)?\s*[:=-]\s*([a-z0-9-]+)/i],
-    ["supervisor", /\b(?:supervisor|encarregado|respons[aá]vel)\s*[:=-]\s*([^\n;|]+)/i],
+    ["supervisor", /\b(?:supervisor|encarregado|respons[aá]vel)\s*[:=-]\s*([^\n;|\t]+)/i],
   ];
   for (const [field, pattern] of patterns) result[field] = text.match(pattern)?.[1]?.trim() ?? "";
   result.plate = result.plate.toUpperCase();
@@ -447,16 +450,16 @@ function inferPositionalFields(operation: ExtractedOperation, values: unknown[],
     raw,
     value: numberValue(raw),
   }));
-  if (operation.extractedKmTotal === null) {
-    const printedTotal = following.find((item) => item.value !== null && Math.abs(item.value - calculated) <= 1);
-    if (printedTotal?.value !== null && printedTotal?.value !== undefined) {
+  const printedTotal = following.find((item) => item.value !== null && Math.abs(item.value - calculated) <= 1);
+  if (printedTotal?.value !== null && printedTotal?.value !== undefined) {
+    if (operation.extractedKmTotal === null || Math.abs(operation.extractedKmTotal - calculated) > 1) {
       operation.extractedKmTotal = printedTotal.value;
       operation.fieldConfidence.extractedKmTotal = confidence * 0.72;
     }
   }
-  if (operation.liters === null) {
-    const liters = following.find((item) => item.value !== null && item.value > 0 && item.value <= 500 && Math.abs(item.value - calculated) > 1);
-    if (liters?.value !== null && liters?.value !== undefined) {
+  const liters = following.find((item) => item.value !== null && item.value > 0 && item.value <= 500 && Math.abs(item.value - calculated) > 1);
+  if (liters?.value !== null && liters?.value !== undefined) {
+    if (operation.liters === null || operation.liters !== liters.value) {
       operation.liters = liters.value;
       operation.refueled = true;
       operation.fieldConfidence.liters = confidence * 0.68;
@@ -468,7 +471,7 @@ function inferPositionalFields(operation: ExtractedOperation, values: unknown[],
       const [name, ...tail] = driver.raw.split(/\s+-\s+/);
       operation.driver = name.trim();
       operation.fieldConfidence.driver = confidence * 0.72;
-      if (tail.length && (!operation.notes || operation.notes === driver.raw)) {
+      if (tail.length && (!operation.notes || operation.notes === driver.raw || !/[a-zà-ÿ]{2}/i.test(operation.notes))) {
         operation.notes = tail.join(" - ").trim();
         operation.fieldConfidence.notes = confidence * 0.62;
       }
