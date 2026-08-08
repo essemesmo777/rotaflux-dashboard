@@ -44,14 +44,18 @@ test("server-renders the private RotaFlux access shell", async () => {
 });
 
 test("keeps documents and calculated daily trips in isolated Supabase storage", async () => {
-  const [hosting, dashboard, operations, operationsRoute, importsRoute, migration, operationsMigration, home, auth] = await Promise.all([
+  const [hosting, dashboard, operations, operationsRoute, importsRoute, ocrRoute, mappingRoute, parser, migration, operationsMigration, mappingMigration, home, auth] = await Promise.all([
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../public/dashboard.html", import.meta.url), "utf8"),
     readFile(new URL("../public/operations.html", import.meta.url), "utf8"),
     readFile(new URL("../app/api/operations/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/imports/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/ocr/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/import-mappings/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/ocr-parser.ts", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/20260808121000_saas_foundation.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/20260808150000_operations_control.sql", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/20260808193942_ocr_import_mappings.sql", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/supabase-rest.ts", import.meta.url), "utf8"),
   ]);
@@ -76,12 +80,30 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
   assert.match(operations, /Tirar foto/);
   assert.match(operations, /revise e confirme/i);
   assert.match(operations, /pdf\.js/);
-  assert.match(operations, /Tesseract\.recognize/);
+  assert.match(operations, /Tesseract\.createWorker/);
+  assert.match(operations, /rotateAuto:true/);
+  assert.match(operations, /Tesseract\.PSM\.SPARSE_TEXT/);
+  assert.match(operations, /preprocessImage/);
+  assert.match(operations, /ocrScannedPdf/);
+  assert.match(operations, /Encontramos uma tabela/);
+  assert.match(operations, /Diagnóstico protegido de extração/);
+  assert.match(operations, /fieldConfidence/);
   assert.match(operations, /allowDuplicates/);
   assert.match(operationsRoute, /operationDuplicateKey/);
   assert.match(operationsRoute, /Possível duplicidade/);
   assert.match(importsRoute, /reviewed/);
+  assert.match(importsRoute, /extractionDiagnostics/);
   assert.match(importsRoute, /\(xlsx\|xls\|csv\|pdf\|jpg\|jpeg\|png\)/);
+  assert.match(ocrRoute, /OPENAI_API_KEY/);
+  assert.match(ocrRoute, /input_image/);
+  assert.match(ocrRoute, /input_file/);
+  assert.match(ocrRoute, /json_schema/);
+  assert.match(ocrRoute, /safeLog/);
+  assert.match(parser, /mapSemanticHeader/);
+  assert.match(parser, /HEADERS_UNMAPPED/);
+  assert.match(mappingRoute, /organization_id/);
+  assert.match(mappingMigration, /enable row level security/);
+  assert.match(mappingMigration, /private\.current_organization_id/);
   assert.match(operationsMigration, /routes_odometer_total_check/);
   assert.match(operationsMigration, /routes_extreme_km_justification_check/);
   assert.match(operationsMigration, /private\.is_manager/);
