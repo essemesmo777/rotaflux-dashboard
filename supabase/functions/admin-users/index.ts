@@ -38,7 +38,7 @@ Deno.serve(async (request: Request) => {
     const email = String(body.email ?? "").trim().toLowerCase();
     const name = String(body.name ?? "").trim();
     const phone = String(body.phone ?? "").trim() || null;
-    const role = body.role === "SUPER_ADMIN" ? "SUPER_ADMIN" : "USER";
+    const role = ["SUPER_ADMIN", "ADMIN"].includes(String(body.role)) ? String(body.role) : "USER";
     const status = ["ACTIVE", "INACTIVE", "SUSPENDED"].includes(String(body.status)) ? String(body.status) : "ACTIVE";
     const organizationId = String(body.organizationId ?? caller.organization_id);
     if (!email || !name || !/^\S+@\S+\.\S+$/.test(email)) return json({ error: "Informe nome e e-mail válidos." }, 400);
@@ -67,7 +67,7 @@ Deno.serve(async (request: Request) => {
       await audit("PASSWORD_RESET_SENT", id, { email: target.email });
       return json({ ok: true });
     }
-    const nextRole = body.role === "SUPER_ADMIN" ? "SUPER_ADMIN" : body.role === "USER" ? "USER" : target.role;
+    const nextRole = ["SUPER_ADMIN", "ADMIN", "USER"].includes(String(body.role)) ? String(body.role) : target.role;
     const nextStatus = ["ACTIVE", "INACTIVE", "SUSPENDED"].includes(String(body.status)) ? String(body.status) : target.status;
     if (id === callerId && (nextRole !== "SUPER_ADMIN" || nextStatus !== "ACTIVE")) return json({ error: "Você não pode remover o próprio acesso administrativo." }, 400);
     const name = body.name === undefined ? target.name : String(body.name).trim();

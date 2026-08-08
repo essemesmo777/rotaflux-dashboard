@@ -9,7 +9,7 @@ export type UserProfile = {
   name: string;
   email: string;
   phone: string | null;
-  role: "SUPER_ADMIN" | "USER";
+  role: "SUPER_ADMIN" | "ADMIN" | "USER";
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
   must_change_password: boolean;
   last_login_at: string | null;

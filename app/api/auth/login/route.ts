@@ -2,7 +2,6 @@ import {
   appendClearedSessionCookies,
   appendSessionCookies,
   getUserProfile,
-  responseError,
   supabaseFetch,
   type AuthSession,
 } from "../../../../lib/supabase-rest";
