@@ -24,7 +24,15 @@ test("server-renders the private RotaFlux access shell", async () => {
 
   const login = await render("/login");
   assert.equal(login.status, 200);
-  assert.match(await login.text(), /Bem-vindo de volta/);
+  const loginHtml = await login.text();
+  assert.match(loginHtml, /Bem-vindo de volta/);
+  assert.match(loginHtml, /Entrar em modo demo/);
+
+  const demo = await render("/demo");
+  assert.equal(demo.status, 200);
+  const demoHtml = await demo.text();
+  assert.match(demoHtml, /Modo demo/);
+  assert.match(demoHtml, /dashboard\.html\?demo=1/);
 });
 
 test("keeps documents and calculated daily trips in isolated Supabase storage", async () => {
@@ -48,6 +56,8 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
   assert.match(importsRoute, /organization_id/);
   assert.match(auth, /HttpOnly/);
   assert.match(home, /src="\/dashboard\.html"/);
+  assert.match(dashboard, /const demoMode/);
+  assert.match(dashboard, /Esta ação está desativada no modo demo/);
   assert.match(dashboard, /endOdometer-startOdometer/);
   assert.match(dashboard, /routeDurationMinutes/);
   assert.match(dashboard, /\/api\/imports/);

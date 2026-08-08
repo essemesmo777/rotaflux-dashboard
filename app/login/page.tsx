@@ -62,6 +62,11 @@ export default function LoginPage() {
             <a className="form-link" href="/forgot-password">Esqueci minha senha</a>
             <button className="primary-action" disabled={loading}>{loading ? "Entrando…" : "Entrar na plataforma"}</button>
           </form>
+          <div className="auth-divider"><span>ou explore antes de entrar</span></div>
+          <a className="demo-action" href="/demo">
+            <span className="demo-action-mark" aria-hidden="true">▶</span>
+            <span><strong>Entrar em modo demo</strong><small>Conheça o painel com dados fictícios</small></span>
+          </a>
           <p className="auth-note">O cadastro é privado. Novos acessos são enviados pelo administrador.</p>
         </div>
       </section>

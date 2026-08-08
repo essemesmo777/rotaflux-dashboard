@@ -53,6 +53,7 @@
       outline-offset: 2px;
     }
     .hidden { display: none !important; }
+    .demo-readonly { display: inline-flex; align-items: center; min-height: 25px; padding: 0 9px; border-radius: 999px; background: var(--blue-soft); color: var(--blue); font-size: 9px; font-weight: 800; white-space: nowrap; }
     .app { min-height: 100vh; }
 
     .sidebar {
@@ -654,6 +655,7 @@
       const SETTINGS_KEY = 'rotaflux-settings-v1';
       const HISTORY_KEY = 'rotaflux-import-history-v1';
       const PAGE_SIZE = 6;
+      const demoMode = new URLSearchParams(window.location.search).get('demo') === '1';
 
       const today = new Date();
       const isoDaysAgo = (days) => { const d = new Date(today); d.setDate(d.getDate() - days); return d.toISOString().slice(0,10); };
@@ -671,10 +673,11 @@
       ];
 
       const defaultSettings = { dieselPrice:6.19, efficiency:4.2, targetMargin:20, dark:false, lossAlerts:true, persist:true };
-      let settings = { ...defaultSettings, ...safeJSON(localStorage.getItem(SETTINGS_KEY), {}) };
-      let routes = safeJSON(localStorage.getItem(STORAGE_KEY), sampleRoutes);
+      const demoImportHistory = [{ fileName:'rotas-exemplo-agosto.xlsx', rowCount:10, date:'Hoje, 09:15' }];
+      let settings = demoMode ? { ...defaultSettings, persist:false } : { ...defaultSettings, ...safeJSON(localStorage.getItem(SETTINGS_KEY), {}) };
+      let routes = demoMode ? [...sampleRoutes] : safeJSON(localStorage.getItem(STORAGE_KEY), sampleRoutes);
       if (!Array.isArray(routes) || !routes.length) routes = [...sampleRoutes];
-      let importHistory = safeJSON(localStorage.getItem(HISTORY_KEY), []);
+      let importHistory = demoMode ? [...demoImportHistory] : safeJSON(localStorage.getItem(HISTORY_KEY), []);
       let cloudReady = false;
       let currentView = 'overview';
       let currentPage = { overview:1, routes:1 };
@@ -684,6 +687,7 @@
 
       function safeJSON(value, fallback) { try { return value ? JSON.parse(value) : fallback; } catch { return fallback; } }
       function persist() {
+        if (demoMode) return;
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
         if (settings.persist) {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(routes));
@@ -787,7 +791,7 @@
         const target=document.getElementById(kind+'Table'); const data=tableData(kind); const maxPage=Math.max(1,Math.ceil(data.length/PAGE_SIZE)); currentPage[kind]=Math.min(currentPage[kind],maxPage); const start=(currentPage[kind]-1)*PAGE_SIZE; const page=data.slice(start,start+PAGE_SIZE);
         if(!data.length){ target.innerHTML=`<div class="empty-state"><i data-lucide="search-x"></i><strong>Nenhuma rota encontrada</strong><span>Ajuste a busca ou importe uma nova planilha.</span></div>`; refreshIcons(); return; }
         const heads=[['date','Data'],['route','Rota'],['vehicle','Veículo'],['km','Km do dia'],['durationMinutes','Jornada'],['liters','Diesel'],['revenue','Receita'],['cost','Custo'],['result','Resultado'],['status','Status']];
-        target.innerHTML=`<div class="table-scroll"><table><thead><tr>${heads.map(([k,l])=>`<th class="sortable" data-sort="${k}">${l}${sortState.key===k?(sortState.dir==='asc'?' ↑':' ↓'):''}</th>`).join('')}<th>Ações</th></tr></thead><tbody>${page.map(r=>`<tr><td>${formatDate(r.date)}</td><td><div class="route-name"><span class="route-avatar">${initials(r.origin,r.destination)}</span><div><strong>${escapeHtml(r.route)}</strong><span>${escapeHtml(r.driver)}</span></div></div></td><td><div class="vehicle"><strong>${escapeHtml(r.vehicle)}</strong><span>${escapeHtml(r.operationalStatus||'Concluída')}</span></div></td><td><strong>${number(r.km,0)} km</strong>${r.startOdometer&&r.endOdometer?`<br><span style="color:var(--muted);font-size:8px">${number(r.startOdometer,0)} → ${number(r.endOdometer,0)}</span>`:''}</td><td>${r.startTime&&r.endTime?`${r.startTime} → ${r.endTime}<br><span style="color:var(--muted);font-size:8px">${formatDuration(r.durationMinutes)}</span>`:'—'}</td><td>${number(r.liters,1)} L<br><span style="color:var(--muted);font-size:8px">${money(r.dieselPrice,2)}/L</span></td><td>${money(r.revenue,0)}</td><td>${money(r.cost,0)}</td><td class="${r.result>=0?'money-positive':'money-negative'}">${r.result>=0?'+':''}${money(r.result,0)}</td><td><span class="status ${r.status}">${r.status==='lucro'?'Lucro':r.status==='perda'?'Perda':'Atenção'}</span></td><td class="row-actions"><button class="more-btn" data-edit="${r.id}" aria-label="Editar rota"><i data-lucide="pencil"></i></button><button class="more-btn" data-delete="${r.id}" aria-label="Excluir rota"><i data-lucide="trash-2"></i></button></td></tr>`).join('')}</tbody></table></div><div class="table-footer"><span>Exibindo ${start+1}–${Math.min(start+PAGE_SIZE,data.length)} de ${data.length} rotas</span><div class="pagination"><button class="page-btn" data-page-kind="${kind}" data-page="${currentPage[kind]-1}" ${currentPage[kind]===1?'disabled':''}>‹</button>${Array.from({length:maxPage},(_,i)=>`<button class="page-btn ${currentPage[kind]===i+1?'active':''}" data-page-kind="${kind}" data-page="${i+1}">${i+1}</button>`).join('')}<button class="page-btn" data-page-kind="${kind}" data-page="${currentPage[kind]+1}" ${currentPage[kind]===maxPage?'disabled':''}>›</button></div></div>`;
+        target.innerHTML=`<div class="table-scroll"><table><thead><tr>${heads.map(([k,l])=>`<th class="sortable" data-sort="${k}">${l}${sortState.key===k?(sortState.dir==='asc'?' ↑':' ↓'):''}</th>`).join('')}<th>Ações</th></tr></thead><tbody>${page.map(r=>`<tr><td>${formatDate(r.date)}</td><td><div class="route-name"><span class="route-avatar">${initials(r.origin,r.destination)}</span><div><strong>${escapeHtml(r.route)}</strong><span>${escapeHtml(r.driver)}</span></div></div></td><td><div class="vehicle"><strong>${escapeHtml(r.vehicle)}</strong><span>${escapeHtml(r.operationalStatus||'Concluída')}</span></div></td><td><strong>${number(r.km,0)} km</strong>${r.startOdometer&&r.endOdometer?`<br><span style="color:var(--muted);font-size:8px">${number(r.startOdometer,0)} → ${number(r.endOdometer,0)}</span>`:''}</td><td>${r.startTime&&r.endTime?`${r.startTime} → ${r.endTime}<br><span style="color:var(--muted);font-size:8px">${formatDuration(r.durationMinutes)}</span>`:'—'}</td><td>${number(r.liters,1)} L<br><span style="color:var(--muted);font-size:8px">${money(r.dieselPrice,2)}/L</span></td><td>${money(r.revenue,0)}</td><td>${money(r.cost,0)}</td><td class="${r.result>=0?'money-positive':'money-negative'}">${r.result>=0?'+':''}${money(r.result,0)}</td><td><span class="status ${r.status}">${r.status==='lucro'?'Lucro':r.status==='perda'?'Perda':'Atenção'}</span></td><td class="row-actions">${demoMode?'<span class="demo-readonly">Somente leitura</span>':`<button class="more-btn" data-edit="${r.id}" aria-label="Editar rota"><i data-lucide="pencil"></i></button><button class="more-btn" data-delete="${r.id}" aria-label="Excluir rota"><i data-lucide="trash-2"></i></button>`}</td></tr>`).join('')}</tbody></table></div><div class="table-footer"><span>Exibindo ${start+1}–${Math.min(start+PAGE_SIZE,data.length)} de ${data.length} rotas</span><div class="pagination"><button class="page-btn" data-page-kind="${kind}" data-page="${currentPage[kind]-1}" ${currentPage[kind]===1?'disabled':''}>‹</button>${Array.from({length:maxPage},(_,i)=>`<button class="page-btn ${currentPage[kind]===i+1?'active':''}" data-page-kind="${kind}" data-page="${i+1}">${i+1}</button>`).join('')}<button class="page-btn" data-page-kind="${kind}" data-page="${currentPage[kind]+1}" ${currentPage[kind]===maxPage?'disabled':''}>›</button></div></div>`;
         target.querySelectorAll('[data-sort]').forEach(el=>el.onclick=()=>{ const key=el.dataset.sort; sortState=sortState.key===key?{key,dir:sortState.dir==='asc'?'desc':'asc'}:{key,dir:'asc'}; renderTables(); });
         target.querySelectorAll('[data-page]').forEach(el=>el.onclick=()=>{ currentPage[el.dataset.pageKind]=Number(el.dataset.page); renderTable(el.dataset.pageKind); });
         target.querySelectorAll('[data-edit]').forEach(el=>el.onclick=()=>openRouteModal(el.dataset.edit));
@@ -850,7 +854,7 @@
       function downloadTemplate(){ const csv='Data;Rota;Placa;Motorista;Origem;Destino;Odômetro Saída;Odômetro Chegada;Horário Partida;Horário Chegada;KM Rodado Dia;Litros;Preço Diesel;Valor Recebido;Outros Custos;Status\n06/08/2026;São Paulo → Campinas;ABC-1D23;Marcos Silva;São Paulo;Campinas;285532;285720;07:10;11:35;;43,8;6,19;1380;285;Concluída\n06/08/2026;Campinas → Sorocaba;XYZ-9E87;Ana Souza;Campinas;Sorocaba;;;13:20;17:05;182;42,3;6,19;1250;240;Concluída'; downloadBlob('\uFEFF'+csv,'modelo-rotaflux.csv','text/csv;charset=utf-8'); showToast('Modelo baixado','Use os odômetros inicial e final; o KM do dia será calculado automaticamente.'); }
       function exportCSV(){ const data=filteredRoutes(); if(!data.length){showToast('Nada para exportar','Não há rotas no período selecionado.','error');return;} const headers=['Data','Rota','Placa','Motorista','Odômetro Saída','Odômetro Chegada','Horário Partida','Horário Chegada','Duração (min)','KM do Dia','Litros','Preço Diesel','Custo Diesel','Outros Custos','Receita','Custo Total','Resultado','Margem']; const rows=data.map(r=>[r.date,r.route,r.vehicle,r.driver,r.startOdometer||'',r.endOdometer||'',r.startTime||'',r.endTime||'',r.durationMinutes,r.km,r.liters,r.dieselPrice,r.dieselCost,r.otherCosts,r.revenue,r.cost,r.result,r.margin]); const csv=[headers,...rows].map(row=>row.map(v=>'"'+String(typeof v==='number'?String(v).replace('.',','):v).replace(/"/g,'""')+'"').join(';')).join('\n'); downloadBlob('\uFEFF'+csv,'relatorio-rotaflux-'+new Date().toISOString().slice(0,10)+'.csv','text/csv;charset=utf-8'); showToast('Relatório exportado',`${data.length} rotas foram incluídas no arquivo.`); }
       function downloadBlob(content,name,type){ const blob=new Blob([content],{type}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500); }
-      async function apiJSON(url,options={}){ const response=await fetch(url,options);let payload={};try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload.error||'O banco de dados não respondeu.');return payload; }
+      async function apiJSON(url,options={}){ if(demoMode)throw new Error('Esta ação está desativada no modo demo.');const response=await fetch(url,options);let payload={};try{payload=await response.json()}catch{}if(!response.ok)throw new Error(payload.error||'O banco de dados não respondeu.');return payload; }
 
       function openRouteModal(id){
         document.getElementById('routeForm').reset(); document.getElementById('routeOtherCosts').value='0'; document.getElementById('routeDate').value=new Date().toISOString().slice(0,10); document.getElementById('routeDieselPrice').value=settings.dieselPrice;
@@ -874,12 +878,13 @@
       function refreshIcons(){ if(window.lucide)lucide.createIcons({attrs:{'aria-hidden':'true'}}); }
 
       function wireEvents(){
+        const demoNotice=()=>showToast('Modo demo','Entre na sua conta para cadastrar, editar ou importar dados.');
         document.querySelectorAll('.nav-btn[data-view]').forEach(b=>b.onclick=()=>switchView(b.dataset.view));
-        document.querySelectorAll('[data-open-upload]').forEach(b=>b.onclick=()=>openModal('uploadModal'));
+        document.querySelectorAll('[data-open-upload]').forEach(b=>b.onclick=()=>demoMode?demoNotice():openModal('uploadModal'));
         document.querySelectorAll('[data-close-modal]').forEach(b=>b.onclick=closeModals);
         document.querySelectorAll('.modal-backdrop').forEach(m=>m.addEventListener('mousedown',e=>{if(e.target===m)closeModals()}));
         document.getElementById('mobileMenuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');
-        document.getElementById('addRouteBtn').onclick=()=>openRouteModal(); document.getElementById('routeForm').onsubmit=saveRoute; document.getElementById('confirmDeleteBtn').onclick=confirmDelete;
+        document.getElementById('addRouteBtn').onclick=()=>demoMode?demoNotice():openRouteModal(); document.getElementById('routeForm').onsubmit=saveRoute; document.getElementById('confirmDeleteBtn').onclick=confirmDelete;
         ['exportOverview','exportRoutes','exportAnalytics'].forEach(id=>document.getElementById(id).onclick=exportCSV);
         ['downloadTemplate','downloadTemplateSide','downloadTemplateModal'].forEach(id=>document.getElementById(id).onclick=downloadTemplate);
         ['overviewSearch','routesSearch'].forEach(id=>document.getElementById(id).oninput=()=>{currentPage[id.startsWith('overview')?'overview':'routes']=1;renderTables()});
@@ -891,12 +896,12 @@
         document.getElementById('settingsForm').onsubmit=e=>{e.preventDefault();settings.dieselPrice=parseNumber(val('defaultDiesel'));settings.efficiency=parseNumber(val('defaultEfficiency'));settings.targetMargin=parseNumber(val('targetMargin'));persist();updateDashboard();showToast('Configurações salvas','Os cálculos foram atualizados com os novos padrões.');};
         document.getElementById('notificationBtn').onclick=()=>showToast('Operação monitorada',`${filteredRoutes().filter(r=>r.status==='perda').length} rota(s) com perda no período selecionado.`);
         document.getElementById('helpBtn').onclick=()=>{switchView('imports');showToast('Central de ajuda','Comece pelo modelo de planilha ou envie seu próprio arquivo.');};
-        const fileInput=document.getElementById('fileInput'); fileInput.onchange=e=>handleFile(e.target.files[0]);
+        const fileInput=document.getElementById('fileInput'); fileInput.onchange=e=>demoMode?demoNotice():handleFile(e.target.files[0]);
         ['routeStartOdometer','routeEndOdometer'].forEach(id=>document.getElementById(id).addEventListener('input',updateDailyKm));
-        [document.getElementById('modalDropzone'),document.getElementById('pageDropzone')].forEach(zone=>{zone.onclick=()=>fileInput.click();zone.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fileInput.click()}};['dragenter','dragover'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.add('dragging')}));['dragleave','drop'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.remove('dragging')}));zone.addEventListener('drop',e=>handleFile(e.dataTransfer.files[0]));});
+        [document.getElementById('modalDropzone'),document.getElementById('pageDropzone')].forEach(zone=>{zone.onclick=()=>demoMode?demoNotice():fileInput.click();zone.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();demoMode?demoNotice():fileInput.click()}};['dragenter','dragover'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();if(!demoMode)zone.classList.add('dragging')}));['dragleave','drop'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.remove('dragging')}));zone.addEventListener('drop',e=>demoMode?demoNotice():handleFile(e.dataTransfer.files[0]));});
         document.getElementById('profileBtn').onclick=e=>{e.stopPropagation();const m=document.getElementById('profileMenu');m.classList.toggle('hidden');e.currentTarget.setAttribute('aria-expanded',String(!m.classList.contains('hidden')))};
         document.addEventListener('click',()=>document.getElementById('profileMenu').classList.add('hidden'));
-        document.querySelectorAll('[data-profile-action]').forEach(b=>b.onclick=async e=>{e.stopPropagation();const a=b.dataset.profileAction;if(a==='settings')switchView('settings');if(a==='dark')applyTheme(!settings.dark);if(a==='logout'){await fetch('/api/auth/logout',{method:'POST'}).catch(()=>undefined);window.top.location.href='/login';return;}document.getElementById('profileMenu').classList.add('hidden')});
+        document.querySelectorAll('[data-profile-action]').forEach(b=>b.onclick=async e=>{e.stopPropagation();const a=b.dataset.profileAction;if(a==='settings')switchView('settings');if(a==='dark')applyTheme(!settings.dark);if(a==='logout'){if(!demoMode)await fetch('/api/auth/logout',{method:'POST'}).catch(()=>undefined);window.top.location.href='/login';return;}document.getElementById('profileMenu').classList.add('hidden')});
         document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModals()});
       }
 
@@ -908,10 +913,11 @@
         try{const response=await fetch('/api/auth/session',{cache:'no-store'});if(!response.ok){if(response.status===401)window.top.location.href='/login';return;}const data=await response.json();const profile=data.profile||{};const name=String(profile.name||'Usuário').trim();const parts=name.split(/\s+/).filter(Boolean);const initials=(parts[0]?.[0]||'U')+(parts.length>1?(parts[parts.length-1]?.[0]||''):'');document.getElementById('profileName').textContent=name;document.getElementById('profileAvatar').textContent=initials.toUpperCase();document.getElementById('profileRole').textContent=profile.role==='SUPER_ADMIN'?'Admin':'Usuário';document.getElementById('welcomeTitle').textContent=`Bom dia, ${parts[0]||'Usuário'}.`;document.getElementById('adminNav').classList.toggle('hidden',profile.role!=='SUPER_ADMIN');}catch{}
       }
       function init(){
-        document.getElementById('currentDateLabel').textContent='Acompanhe os números da sua operação em tempo real.';
+        document.getElementById('currentDateLabel').textContent=demoMode?'Explore indicadores calculados com dados fictícios.':'Acompanhe os números da sua operação em tempo real.';
         document.getElementById('defaultDiesel').value=settings.dieselPrice;document.getElementById('defaultEfficiency').value=settings.efficiency;document.getElementById('targetMargin').value=settings.targetMargin;
         document.getElementById('lossAlertSwitch').classList.toggle('on',settings.lossAlerts);document.getElementById('localStorageSwitch').classList.add('on');
-        wireEvents();applyTheme(settings.dark);refreshIcons();updateDashboard();hydrateProfile();hydrateFromCloud();
+        if(demoMode){document.getElementById('profileName').textContent='Conta Demo';document.getElementById('profileAvatar').textContent='DM';document.getElementById('profileRole').textContent='Somente leitura';document.getElementById('welcomeTitle').textContent='Bem-vindo à demonstração.';document.querySelector('.privacy-note').innerHTML='<i data-lucide="shield-check"></i> Dados fictícios — nada é salvo';}
+        wireEvents();applyTheme(settings.dark);refreshIcons();updateDashboard();if(!demoMode){hydrateProfile();hydrateFromCloud();}
       }
       if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
     })();
