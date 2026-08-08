@@ -20,7 +20,7 @@ function toClient(row: DbRoute) {
     startTime: typeof row.start_time === "string" ? row.start_time.slice(0, 5) : null,
     endTime: typeof row.end_time === "string" ? row.end_time.slice(0, 5) : null,
     durationMinutes: Number(row.duration_minutes ?? 0),
-    liters: Number(row.liters ?? 0),
+    liters: row.liters === null || row.liters === undefined ? null : Number(row.liters),
     dieselPrice: Number(row.diesel_price ?? 0),
     revenue: Number(row.revenue ?? 0),
     otherCosts: Number(row.other_costs ?? 0),

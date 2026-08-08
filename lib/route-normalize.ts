@@ -31,27 +31,29 @@ function durationMinutes(startTime: string | null, endTime: string | null) {
 export function normalizeRoute(input: RouteInput, options?: { id?: string; importId?: string | null }) {
   const startOdometer = optionalNumeric(input.startOdometer);
   const endOdometer = optionalNumeric(input.endOdometer);
-  const odometerKm =
-    startOdometer !== null && endOdometer !== null && endOdometer > startOdometer
-      ? endOdometer - startOdometer
-      : 0;
-  const km = odometerKm || numeric(input.km);
+  const route = String(input.route ?? "").trim();
+  const driver = String(input.driver ?? "").trim();
+  const liters = optionalNumeric(input.liters);
+  const revenue = optionalNumeric(input.revenue);
   const startTime = time(input.startTime);
   const endTime = time(input.endTime);
 
   if (!String(input.date ?? "").trim()) throw new Error("A data da rota é obrigatória.");
-  if (!String(input.route ?? "").trim()) throw new Error("O nome da rota é obrigatório.");
-  if (km <= 0) {
-    throw new Error("Informe os quilômetros do dia ou odômetros de saída e chegada válidos.");
-  }
+  if (!route) throw new Error("O nome da rota é obrigatório.");
+  if (!driver) throw new Error("O motorista é obrigatório.");
+  if (startOdometer === null || endOdometer === null) throw new Error("Os odômetros de saída e chegada são obrigatórios.");
+  if (endOdometer <= startOdometer) throw new Error("O odômetro de chegada deve ser maior que o de saída.");
+  if (liters !== null && liters < 0) throw new Error("Os litros consumidos não podem ser negativos.");
+  if (revenue === null || revenue < 0) throw new Error("O valor recebido é obrigatório.");
+  const km = endOdometer - startOdometer;
 
   return {
     id: options?.id ?? String(input.id || crypto.randomUUID()),
     importId: options?.importId ?? null,
     date: String(input.date),
-    route: String(input.route).trim(),
+    route,
     vehicle: String(input.vehicle || "Não informado").trim(),
-    driver: String(input.driver || "Não informado").trim(),
+    driver,
     origin: String(input.origin || "").trim(),
     destination: String(input.destination || "").trim(),
     startOdometer,
@@ -60,9 +62,9 @@ export function normalizeRoute(input: RouteInput, options?: { id?: string; impor
     startTime,
     endTime,
     durationMinutes: durationMinutes(startTime, endTime),
-    liters: Math.max(0, numeric(input.liters)),
+    liters: liters === null ? null : liters,
     dieselPrice: Math.max(0, numeric(input.dieselPrice)),
-    revenue: Math.max(0, numeric(input.revenue)),
+    revenue,
     otherCosts: Math.max(0, numeric(input.otherCosts)),
     operationalStatus: String(input.operationalStatus || "Concluída"),
     updatedAt: new Date().toISOString(),
