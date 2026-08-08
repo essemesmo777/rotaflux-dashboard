@@ -100,6 +100,7 @@ export async function POST(request: Request) {
     const form = await request.formData();
     const file = form.get("file");
     const rawOperations = form.get("operations") ?? form.get("routes");
+    const rawDiagnostics = form.get("extractionDiagnostics");
     const reviewed = String(form.get("reviewed") ?? "") === "true";
     const allowDuplicates = String(form.get("allowDuplicates") ?? "") === "true";
     if (!(file instanceof File)) return Response.json({ error: "Selecione um arquivo." }, { status: 400 });
@@ -112,6 +113,15 @@ export async function POST(request: Request) {
     }
 
     const payload = JSON.parse(String(rawOperations || "[]")) as Array<Record<string, unknown>>;
+    let extractionDiagnostics: Record<string, unknown> = {};
+    try {
+      const candidate = JSON.parse(String(rawDiagnostics || "{}")) as Record<string, unknown>;
+      for (const key of ["requestId", "stage", "code", "strategy", "textDetected", "tableFound", "mappedHeaderCount", "candidateCount", "reviewCount"]) {
+        if (candidate[key] !== undefined) extractionDiagnostics[key] = candidate[key];
+      }
+    } catch {
+      extractionDiagnostics = {};
+    }
     if (!Array.isArray(payload) || !payload.length) {
       return Response.json({ error: "Nenhuma operação válida foi encontrada." }, { status: 400 });
     }
@@ -174,6 +184,7 @@ export async function POST(request: Request) {
         validRows: records.length,
         duplicateRows: duplicateIndexes.length,
         reviewed: true,
+        extraction: extractionDiagnostics,
       },
       confirmed_at: confirmedAt,
     };
