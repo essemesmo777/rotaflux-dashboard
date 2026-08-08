@@ -53,14 +53,17 @@ test("keeps partial operations for review instead of rejecting the document", ()
 
 test("recovers odometers and driver when photographed headers are visually shifted", () => {
   const result = parseOcrText([
-    "VEÍCULO: UNO",
-    "PLACA: XYZ-0101",
-    "DATA;HORA SAÍDA;HORA CHEGADA;MOTORISTA;KM INICIAL;KM FINAL;LITROS;OBSERVAÇÕES",
+    "VEÍCULO: UNO\tPLACA: XYZ-0101\tSUPERVISOR: FABIO DIAS SOUZA",
+    "DATA;KM TOTAL;LITROS;MOTORISTA;KM INICIAL;KM FINAL;OBSERVAÇÕES;SOLICITANTE",
     "01/01/2010;08:00;17:00;87396;87465;69;25;RICARDO - ATENDENDO AO RH",
   ].join("\n"), 0.86);
   assert.equal(result.operations.length, 1);
+  assert.equal(result.operations[0].vehicle, "UNO");
+  assert.equal(result.operations[0].supervisor, "FABIO DIAS SOUZA");
   assert.equal(result.operations[0].startOdometer, 87396);
   assert.equal(result.operations[0].endOdometer, 87465);
+  assert.equal(result.operations[0].extractedKmTotal, 69);
+  assert.equal(result.operations[0].liters, 25);
   assert.equal(result.operations[0].driver, "RICARDO");
   assert.equal(result.operations[0].notes, "ATENDENDO AO RH");
 });
