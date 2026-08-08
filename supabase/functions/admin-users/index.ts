@@ -75,7 +75,11 @@ Deno.serve(async (request: Request) => {
     const organizationId = body.organizationId ? String(body.organizationId) : target.organization_id;
     const { error } = await service.from("profiles").update({ name, phone, role: nextRole, status: nextStatus, organization_id: organizationId }).eq("id", id);
     if (error) return json({ error: "Não foi possível atualizar o usuário." }, 400);
-    await service.auth.admin.updateUserById(id, { app_metadata: { role: nextRole, organization_id: organizationId }, user_metadata: { name, phone } });
+    const { data: authTarget } = await service.auth.admin.getUserById(id);
+    await service.auth.admin.updateUserById(id, {
+      app_metadata: { ...(authTarget.user?.app_metadata ?? {}), role: nextRole, organization_id: organizationId },
+      user_metadata: { ...(authTarget.user?.user_metadata ?? {}), name, phone },
+    });
     await audit("USER_UPDATED", id, { role: nextRole, status: nextStatus });
     return json({ ok: true });
   }
@@ -84,9 +88,9 @@ Deno.serve(async (request: Request) => {
     const id = new URL(request.url).searchParams.get("id") || String(body.id ?? "");
     if (!id) return json({ error: "Usuário não informado." }, 400);
     if (id === callerId) return json({ error: "Você não pode excluir a própria conta." }, 400);
+    await audit("USER_DELETE_REQUESTED", id);
     const { error } = await service.auth.admin.deleteUser(id);
     if (error) return json({ error: "Não foi possível excluir o usuário." }, 400);
-    await audit("USER_DELETED", id);
     return json({ ok: true });
   }
 
