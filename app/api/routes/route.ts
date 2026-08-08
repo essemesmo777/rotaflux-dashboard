@@ -10,6 +10,7 @@ function toClient(row: DbRoute) {
     date: row.date,
     route: row.route,
     vehicle: row.vehicle,
+    plate: row.plate ?? row.vehicle,
     driver: row.driver,
     origin: row.origin ?? "",
     destination: row.destination ?? "",
@@ -24,6 +25,7 @@ function toClient(row: DbRoute) {
     revenue: Number(row.revenue ?? 0),
     otherCosts: Number(row.other_costs ?? 0),
     operationalStatus: row.operational_status ?? "Concluída",
+    source: row.source ?? "MANUAL",
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -38,6 +40,7 @@ function toDatabase(record: ReturnType<typeof normalizeRoute>, organizationId: s
     date: record.date,
     route: record.route,
     vehicle: record.vehicle,
+    plate: record.vehicle,
     driver: record.driver,
     origin: record.origin,
     destination: record.destination,
@@ -52,6 +55,7 @@ function toDatabase(record: ReturnType<typeof normalizeRoute>, organizationId: s
     revenue: record.revenue,
     other_costs: record.otherCosts,
     operational_status: record.operationalStatus,
+    source: "MANUAL",
     updated_at: record.updatedAt,
   };
 }
@@ -102,6 +106,8 @@ export async function PATCH(request: Request) {
     const database = toDatabase(record, session.profile.organization_id, session.user.id);
     delete (database as Partial<typeof database>).id;
     delete (database as Partial<typeof database>).import_id;
+    delete (database as Partial<typeof database>).plate;
+    delete (database as Partial<typeof database>).source;
     const response = await supabaseFetch(`/rest/v1/routes?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
       token: session.token,
