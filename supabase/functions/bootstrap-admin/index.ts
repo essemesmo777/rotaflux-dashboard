@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const ADMIN_EMAIL = "augustocibersegurança2026@gmail.com";
+const ADMIN_EMAIL = "augustonanbrum@gmail.com";
 const APP_ORIGIN = "https://rotaflux-gestao-rotas.augustonanbrum.chatgpt.site";
 
 function json(body: unknown, status = 200) {
