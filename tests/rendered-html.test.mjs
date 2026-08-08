@@ -77,6 +77,11 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
   assert.match(dashboard, /routeDurationMinutes/);
   assert.match(dashboard, /\/api\/imports/);
   assert.match(dashboard, /id="operationsNav"/);
+  assert.match(dashboard, /Preenchimento prioritário/);
+  assert.match(dashboard, /id="routeStartOdometer"[^>]*required/);
+  assert.match(dashboard, /id="routeEndOdometer"[^>]*required/);
+  assert.doesNotMatch(dashboard, /id="routeLiters"[^>]*required/);
+  assert.doesNotMatch(dashboard, /id="routeVehicle"[^>]*required/);
   assert.match(operations, /Tirar foto/);
   assert.match(operations, /revise e confirme/i);
   assert.match(operations, /pdf\.js/);
