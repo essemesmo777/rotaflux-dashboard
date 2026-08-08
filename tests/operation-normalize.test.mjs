@@ -4,7 +4,9 @@ import test from "node:test";
 import {
   normalizeOperation,
   operationDuplicateKey,
+  operationToClient,
   operationToDatabase,
+  refuelingToDatabase,
 } from "../lib/operation-normalize.ts";
 
 const complete = {
@@ -59,6 +61,54 @@ test("keeps fuel values absent when no refueling was reported", () => {
   const row = operationToDatabase(operation, crypto.randomUUID(), crypto.randomUUID());
   assert.equal(row.liters, null);
   assert.equal(row.refueled, false);
+});
+
+test("supports multiple stations and derives the paid total and weighted price", () => {
+  const operation = normalizeOperation({
+    ...complete,
+    refuelings: [
+      { stationName: "Posto Norte", odometer: 128500, liters: 30, pricePerLiter: 6.1, amountPaid: 183 },
+      { stationName: "Posto Sul", odometer: 128650, liters: 31.4, pricePerLiter: 6.2, amountPaid: 194.68 },
+    ],
+  });
+  assert.equal(operation.refuelings.length, 2);
+  assert.equal(operation.liters, 61.4);
+  assert.equal(operation.fuelAmountPaid, 377.68);
+  assert.equal(operation.fuelAveragePrice, 6.151);
+  assert.equal(operation.refuelOdometer, 128500);
+  assert.equal(operation.dieselPrice, 6.151);
+
+  const row = refuelingToDatabase(operation.refuelings[0], operation.id, crypto.randomUUID());
+  assert.equal(row.station_name, "Posto Norte");
+  assert.equal(row.amount_paid, 183);
+});
+
+test("requires a complete detailed refueling when the new list is supplied", () => {
+  assert.throws(
+    () => normalizeOperation({ ...complete, refuelings: [] }),
+    /pelo menos um abastecimento/,
+  );
+  assert.throws(
+    () => normalizeOperation({
+      ...complete,
+      refuelings: [{ stationName: "Posto Norte", odometer: 128500, liters: 30, pricePerLiter: 0 }],
+    }),
+    /valor por litro/,
+  );
+});
+
+test("maps detailed database rows back to the operation totals", () => {
+  const client = operationToClient(
+    { id: "route-1", km: 282, refueled: true, liters: 99, diesel_price: 1 },
+    [
+      { id: "fuel-1", station_name: "Posto A", odometer: 100, liters: 20, price_per_liter: 6, amount_paid: 120 },
+      { id: "fuel-2", station_name: "Posto B", odometer: 200, liters: 25, price_per_liter: 6.2, amount_paid: 155 },
+    ],
+  );
+  assert.equal(client.liters, 45);
+  assert.equal(client.fuelAmountPaid, 275);
+  assert.equal(client.refuelings.length, 2);
+  assert.equal(client.fuelEfficiency, 282 / 45);
 });
 
 test("uses a deterministic duplicate signature", () => {
