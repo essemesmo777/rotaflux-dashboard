@@ -3,11 +3,50 @@ import {
   operationDuplicateKey,
   operationToClient,
   operationToDatabase,
+  refuelingToDatabase,
   type NormalizedOperation,
 } from "../../../lib/operation-normalize";
 import { requireSession, responseError, supabaseFetch } from "../../../lib/supabase-rest";
 
 type DbOperation = Record<string, unknown>;
+type DbRefueling = Record<string, unknown>;
+
+async function refuelingsForRoute(token: string, routeId?: string) {
+  const filter = routeId ? `&route_id=eq.${encodeURIComponent(routeId)}` : "";
+  const response = await supabaseFetch(
+    `/rest/v1/route_refuelings?select=*&order=route_id,odometer,created_at&limit=10000${filter}`,
+    { token },
+  );
+  if (!response.ok) throw new Error(await responseError(response, "Não foi possível carregar os abastecimentos."));
+  return (await response.json()) as DbRefueling[];
+}
+
+function withRefuelings(rows: DbOperation[], refuelings: DbRefueling[]) {
+  const grouped = new Map<string, DbRefueling[]>();
+  for (const item of refuelings) {
+    const routeId = String(item.route_id ?? "");
+    grouped.set(routeId, [...(grouped.get(routeId) ?? []), item]);
+  }
+  return rows.map((row) => operationToClient(row, grouped.get(String(row.id)) ?? []));
+}
+
+async function replaceRefuelings(token: string, record: NormalizedOperation, organizationId: string) {
+  const deletion = await supabaseFetch(`/rest/v1/route_refuelings?route_id=eq.${encodeURIComponent(record.id)}`, {
+    method: "DELETE",
+    token,
+  });
+  if (!deletion.ok) throw new Error(await responseError(deletion, "Não foi possível atualizar os abastecimentos."));
+  if (!record.refuelings.length) return [];
+
+  const response = await supabaseFetch("/rest/v1/route_refuelings", {
+    method: "POST",
+    token,
+    headers: { "Content-Type": "application/json", Prefer: "return=representation" },
+    body: JSON.stringify(record.refuelings.map((item) => refuelingToDatabase(item, record.id, organizationId))),
+  });
+  if (!response.ok) throw new Error(await responseError(response, "Não foi possível salvar os abastecimentos."));
+  return (await response.json()) as DbRefueling[];
+}
 
 async function rowsForDate(token: string, date: string) {
   const response = await supabaseFetch(
@@ -37,21 +76,27 @@ async function findDuplicate(token: string, record: NormalizedOperation, ignored
 export async function GET(request: Request) {
   const session = await requireSession(request);
   if (!session) return Response.json({ error: "Sessão expirada." }, { status: 401 });
-  const response = await supabaseFetch("/rest/v1/routes?select=*&order=date.desc,created_at.desc&limit=5000", {
-    token: session.token,
-  });
-  if (!response.ok) {
-    return Response.json({ error: await responseError(response, "Não foi possível carregar as operações.") }, { status: 500 });
+  try {
+    const [response, refuelings] = await Promise.all([
+      supabaseFetch("/rest/v1/routes?select=*&order=date.desc,created_at.desc&limit=5000", { token: session.token }),
+      refuelingsForRoute(session.token),
+    ]);
+    if (!response.ok) {
+      return Response.json({ error: await responseError(response, "Não foi possível carregar as operações.") }, { status: 500 });
+    }
+    const rows = (await response.json()) as DbOperation[];
+    return Response.json({
+      operations: withRefuelings(rows, refuelings),
+      permissions: {
+        canCreate: true,
+        canManageAll: ["SUPER_ADMIN", "ADMIN"].includes(session.profile.role),
+        userId: session.user.id,
+        role: session.profile.role,
+      },
+    });
+  } catch (error) {
+    return Response.json({ error: error instanceof Error ? error.message : "Não foi possível carregar as operações." }, { status: 500 });
   }
-  return Response.json({
-    operations: ((await response.json()) as DbOperation[]).map(operationToClient),
-    permissions: {
-      canCreate: true,
-      canManageAll: ["SUPER_ADMIN", "ADMIN"].includes(session.profile.role),
-      userId: session.user.id,
-      role: session.profile.role,
-    },
-  });
 }
 
 export async function POST(request: Request) {
@@ -77,7 +122,16 @@ export async function POST(request: Request) {
       return Response.json({ error: await responseError(response, "Não foi possível salvar a operação.") }, { status: 400 });
     }
     const [created] = (await response.json()) as DbOperation[];
-    return Response.json({ operation: operationToClient(created) }, { status: 201 });
+    let refuelings: DbRefueling[] = [];
+    try {
+      if (Object.hasOwn(payload, "refuelings")) {
+        refuelings = await replaceRefuelings(session.token, record, session.profile.organization_id);
+      }
+    } catch (error) {
+      await supabaseFetch(`/rest/v1/routes?id=eq.${encodeURIComponent(record.id)}`, { method: "DELETE", token: session.token });
+      throw error;
+    }
+    return Response.json({ operation: operationToClient(created, refuelings) }, { status: 201 });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Não foi possível salvar a operação." }, { status: 400 });
   }
@@ -96,9 +150,12 @@ export async function PATCH(request: Request) {
     const [current] = (await currentResponse.json()) as DbOperation[];
     if (!current) return Response.json({ error: "Operação não encontrada." }, { status: 404 });
 
-    const currentClient = operationToClient(current) as Record<string, unknown>;
+    const currentRefuelings = await refuelingsForRoute(session.token, id);
+    const currentClient = operationToClient(current, currentRefuelings) as Record<string, unknown>;
+    const merged = { ...currentClient, ...payload };
+    if (!Object.hasOwn(payload, "refuelings") && !currentRefuelings.length) delete merged.refuelings;
     const source = String(current.source ?? "MANUAL") as "MANUAL" | "EXCEL" | "CSV" | "PDF" | "IMAGE";
-    const record = normalizeOperation({ ...currentClient, ...payload, source }, {
+    const record = normalizeOperation({ ...merged, source }, {
       id,
       importId: current.import_id ? String(current.import_id) : null,
       source,
@@ -128,7 +185,10 @@ export async function PATCH(request: Request) {
     }
     const [updated] = (await response.json()) as DbOperation[];
     if (!updated) return Response.json({ error: "Você não tem permissão para editar esta operação." }, { status: 403 });
-    return Response.json({ operation: operationToClient(updated) });
+    const refuelings = Object.hasOwn(payload, "refuelings")
+      ? await replaceRefuelings(session.token, record, String(current.organization_id))
+      : currentRefuelings;
+    return Response.json({ operation: operationToClient(updated, refuelings) });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Não foi possível atualizar a operação." }, { status: 400 });
   }

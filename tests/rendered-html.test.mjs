@@ -44,7 +44,7 @@ test("server-renders the private RotaFlux access shell", async () => {
 });
 
 test("keeps documents and calculated daily trips in isolated Supabase storage", async () => {
-  const [hosting, dashboard, operations, operationsRoute, importsRoute, ocrRoute, mappingRoute, parser, migration, operationsMigration, mappingMigration, home, auth] = await Promise.all([
+  const [hosting, dashboard, operations, operationsRoute, importsRoute, ocrRoute, mappingRoute, parser, migration, operationsMigration, mappingMigration, refuelingsMigration, home, auth] = await Promise.all([
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../public/dashboard.html", import.meta.url), "utf8"),
     readFile(new URL("../public/operations.html", import.meta.url), "utf8"),
@@ -56,6 +56,7 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
     readFile(new URL("../supabase/migrations/20260808121000_saas_foundation.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/20260808150000_operations_control.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/20260808193942_ocr_import_mappings.sql", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/20260808223000_multi_station_refuelings.sql", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/supabase-rest.ts", import.meta.url), "utf8"),
   ]);
@@ -94,7 +95,11 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
   assert.match(operations, /Diagnóstico protegido de extração/);
   assert.match(operations, /fieldConfidence/);
   assert.match(operations, /allowDuplicates/);
+  assert.match(operations, /Valor pago para abastecer/);
+  assert.match(operations, /Abastecimentos da operação/);
+  assert.match(operations, /data-refueling-field="pricePerLiter"/);
   assert.match(operationsRoute, /operationDuplicateKey/);
+  assert.match(operationsRoute, /route_refuelings/);
   assert.match(operationsRoute, /Possível duplicidade/);
   assert.match(importsRoute, /reviewed/);
   assert.match(importsRoute, /extractionDiagnostics/);
@@ -112,4 +117,7 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
   assert.match(operationsMigration, /routes_odometer_total_check/);
   assert.match(operationsMigration, /routes_extreme_km_justification_check/);
   assert.match(operationsMigration, /private\.is_manager/);
+  assert.match(refuelingsMigration, /create table public\.route_refuelings/);
+  assert.match(refuelingsMigration, /enable row level security/);
+  assert.match(refuelingsMigration, /grant select, insert, update, delete/);
 });
