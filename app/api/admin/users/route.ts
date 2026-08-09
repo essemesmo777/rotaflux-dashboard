@@ -3,7 +3,7 @@ import { getSupabaseConfig, requireSession } from "../../../../lib/supabase-rest
 async function proxy(request: Request) {
   const session = await requireSession(request);
   if (!session) return Response.json({ error: "Sessão expirada." }, { status: 401 });
-  if (session.profile.role !== "SUPER_ADMIN") return Response.json({ error: "Acesso restrito ao administrador." }, { status: 403 });
+  if (!["SUPER_ADMIN", "COMPANY_ADMIN"].includes(session.profile.role)) return Response.json({ error: "Acesso restrito à administração." }, { status: 403 });
   const { url, publishableKey } = getSupabaseConfig();
   const sourceUrl = new URL(request.url);
   const target = `${url}/functions/v1/admin-users${sourceUrl.search}`;

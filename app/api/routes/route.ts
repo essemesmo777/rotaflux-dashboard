@@ -1,5 +1,11 @@
 import { normalizeRoute } from "../../../lib/route-normalize";
-import { requireSession, responseError, supabaseFetch } from "../../../lib/supabase-rest";
+import {
+  getAssignableDriver,
+  listAssignableDrivers,
+  requireSession,
+  responseError,
+  supabaseFetch,
+} from "../../../lib/supabase-rest";
 
 type DbRoute = Record<string, unknown>;
 
@@ -12,6 +18,7 @@ function toClient(row: DbRoute) {
     vehicle: row.vehicle,
     plate: row.plate ?? row.vehicle,
     driver: row.driver,
+    driverUserId: row.driver_user_id ?? null,
     origin: row.origin ?? "",
     destination: row.destination ?? "",
     startOdometer: row.start_odometer === null ? null : Number(row.start_odometer),
@@ -42,6 +49,7 @@ function toDatabase(record: ReturnType<typeof normalizeRoute>, organizationId: s
     vehicle: record.vehicle,
     plate: record.vehicle,
     driver: record.driver,
+    driver_user_id: record.driverUserId,
     origin: record.origin,
     destination: record.destination,
     start_odometer: record.startOdometer,
@@ -66,6 +74,19 @@ async function authenticated(request: Request) {
   return session;
 }
 
+async function resolveDriver(
+  session: NonNullable<Awaited<ReturnType<typeof authenticated>>>,
+  payload: Record<string, unknown>,
+) {
+  const requestedId = session.profile.role === "DRIVER"
+    ? session.user.id
+    : String(payload.driverUserId ?? payload.driver_user_id ?? "");
+  if (!requestedId) throw new Error("Selecione um motorista ativo da empresa.");
+  const driver = await getAssignableDriver(session.token, session.profile.organization_id, requestedId);
+  if (!driver) throw new Error("O motorista informado não pertence à empresa ou está inativo.");
+  return driver;
+}
+
 export async function GET(request: Request) {
   const session = await authenticated(request);
   if (!session) return Response.json({ error: "Sessão expirada." }, { status: 401 });
@@ -73,14 +94,19 @@ export async function GET(request: Request) {
     token: session.token,
   });
   if (!response.ok) return Response.json({ error: await responseError(response, "Não foi possível carregar as rotas.") }, { status: 500 });
-  return Response.json({ routes: ((await response.json()) as DbRoute[]).map(toClient) });
+  const drivers = session.profile.role === "COMPANY_ADMIN"
+    ? await listAssignableDrivers(session.token, session.profile.organization_id)
+    : [];
+  return Response.json({ routes: ((await response.json()) as DbRoute[]).map(toClient), drivers });
 }
 
 export async function POST(request: Request) {
   const session = await authenticated(request);
   if (!session) return Response.json({ error: "Sessão expirada." }, { status: 401 });
   try {
-    const record = normalizeRoute((await request.json()) as Record<string, unknown>);
+    const payload = (await request.json()) as Record<string, unknown>;
+    const driver = await resolveDriver(session, payload);
+    const record = normalizeRoute({ ...payload, driver: driver.name, driverUserId: driver.id });
     const response = await supabaseFetch("/rest/v1/routes", {
       method: "POST",
       token: session.token,
@@ -102,12 +128,15 @@ export async function PATCH(request: Request) {
     const payload = (await request.json()) as Record<string, unknown>;
     const id = String(payload.id || "");
     if (!id) return Response.json({ error: "Identificador da rota ausente." }, { status: 400 });
-    const record = normalizeRoute(payload, { id });
+    const driver = await resolveDriver(session, payload);
+    const record = normalizeRoute({ ...payload, driver: driver.name, driverUserId: driver.id }, { id });
     const database = toDatabase(record, session.profile.organization_id, session.user.id);
     delete (database as Partial<typeof database>).id;
     delete (database as Partial<typeof database>).import_id;
     delete (database as Partial<typeof database>).plate;
     delete (database as Partial<typeof database>).source;
+    delete (database as Partial<typeof database>).organization_id;
+    delete (database as Partial<typeof database>).user_id;
     const response = await supabaseFetch(`/rest/v1/routes?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
       token: session.token,

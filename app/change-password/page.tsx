@@ -44,7 +44,7 @@ export default function ChangePasswordPage() {
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Não foi possível alterar a senha.");
-      window.location.replace("/");
+      window.location.replace(payload.redirectTo || "/");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Não foi possível alterar a senha.");
       setLoading(false);

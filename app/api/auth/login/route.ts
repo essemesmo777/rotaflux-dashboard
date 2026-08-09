@@ -2,6 +2,7 @@ import {
   appendClearedSessionCookies,
   appendSessionCookies,
   getUserProfile,
+  homePathForRole,
   supabaseFetch,
   type AuthSession,
 } from "../../../../lib/supabase-rest";
@@ -32,6 +33,11 @@ export async function POST(request: Request) {
       { status: 403, headers },
     );
   }
+  if (profile.role !== "SUPER_ADMIN" && profile.organizations?.status !== "ACTIVE") {
+    const headers = new Headers();
+    appendClearedSessionCookies(headers, request);
+    return Response.json({ error: "O acesso da sua empresa está suspenso." }, { status: 403, headers });
+  }
 
   await supabaseFetch(`/rest/v1/profiles?id=eq.${encodeURIComponent(profile.id)}`, {
     method: "PATCH",
@@ -42,5 +48,5 @@ export async function POST(request: Request) {
 
   const headers = new Headers();
   appendSessionCookies(headers, request, session);
-  return Response.json({ profile }, { headers });
+  return Response.json({ profile, redirectTo: homePathForRole(profile.role) }, { headers });
 }

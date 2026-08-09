@@ -1,5 +1,5 @@
 import { normalizeVisionExtraction, parseOcrText, type ExtractionDiagnostics, type ExtractionResult } from "../../../lib/ocr-parser";
-import { requireSession } from "../../../lib/supabase-rest";
+import { canManageCompany, requireSession } from "../../../lib/supabase-rest";
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "application/pdf"]);
@@ -184,6 +184,7 @@ function protectedDebug(result: ExtractionResult, enabled: boolean) {
 export async function POST(request: Request) {
   const session = await requireSession(request);
   if (!session) return Response.json({ error: "Sessão expirada." }, { status: 401 });
+  if (!canManageCompany(session.profile.role)) return Response.json({ error: "OCR restrito à administração da empresa." }, { status: 403 });
   const requestId = crypto.randomUUID();
   let file: File | null = null;
   let rawText = "";

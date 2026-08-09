@@ -6,7 +6,13 @@ import {
   refuelingToDatabase,
   type NormalizedOperation,
 } from "../../../lib/operation-normalize";
-import { requireSession, responseError, supabaseFetch } from "../../../lib/supabase-rest";
+import {
+  getAssignableDriver,
+  listAssignableDrivers,
+  requireSession,
+  responseError,
+  supabaseFetch,
+} from "../../../lib/supabase-rest";
 
 type DbOperation = Record<string, unknown>;
 type DbRefueling = Record<string, unknown>;
@@ -73,6 +79,19 @@ async function findDuplicate(token: string, record: NormalizedOperation, ignored
   return rows.find((row) => String(row.id) !== ignoredId && rowDuplicateKey(row) === key);
 }
 
+async function resolveDriver(
+  session: NonNullable<Awaited<ReturnType<typeof requireSession>>>,
+  payload: Record<string, unknown>,
+) {
+  const requestedId = session.profile.role === "DRIVER"
+    ? session.user.id
+    : String(payload.driverUserId ?? payload.driver_user_id ?? "");
+  if (!requestedId) throw new Error("Selecione um motorista ativo da empresa.");
+  const driver = await getAssignableDriver(session.token, session.profile.organization_id, requestedId);
+  if (!driver) throw new Error("O motorista informado não pertence à empresa ou está inativo.");
+  return driver;
+}
+
 export async function GET(request: Request) {
   const session = await requireSession(request);
   if (!session) return Response.json({ error: "Sessão expirada." }, { status: 401 });
@@ -85,11 +104,15 @@ export async function GET(request: Request) {
       return Response.json({ error: await responseError(response, "Não foi possível carregar as operações.") }, { status: 500 });
     }
     const rows = (await response.json()) as DbOperation[];
+    const drivers = session.profile.role === "COMPANY_ADMIN"
+      ? await listAssignableDrivers(session.token, session.profile.organization_id)
+      : [];
     return Response.json({
       operations: withRefuelings(rows, refuelings),
+      drivers,
       permissions: {
         canCreate: true,
-        canManageAll: ["SUPER_ADMIN", "ADMIN"].includes(session.profile.role),
+        canManageAll: ["SUPER_ADMIN", "COMPANY_ADMIN"].includes(session.profile.role),
         userId: session.user.id,
         role: session.profile.role,
       },
@@ -104,7 +127,8 @@ export async function POST(request: Request) {
   if (!session) return Response.json({ error: "Sessão expirada." }, { status: 401 });
   try {
     const payload = (await request.json()) as Record<string, unknown>;
-    const record = normalizeOperation(payload, { source: "MANUAL" });
+    const driver = await resolveDriver(session, payload);
+    const record = normalizeOperation({ ...payload, driver: driver.name, driverUserId: driver.id }, { source: "MANUAL" });
     const duplicate = await findDuplicate(session.token, record);
     if (duplicate && !record.duplicateOverride) {
       return Response.json(
@@ -153,6 +177,9 @@ export async function PATCH(request: Request) {
     const currentRefuelings = await refuelingsForRoute(session.token, id);
     const currentClient = operationToClient(current, currentRefuelings) as Record<string, unknown>;
     const merged = { ...currentClient, ...payload };
+    const driver = await resolveDriver(session, merged);
+    merged.driver = driver.name;
+    merged.driverUserId = driver.id;
     if (!Object.hasOwn(payload, "refuelings") && !currentRefuelings.length) delete merged.refuelings;
     const source = String(current.source ?? "MANUAL") as "MANUAL" | "EXCEL" | "CSV" | "PDF" | "IMAGE";
     const record = normalizeOperation({ ...merged, source }, {

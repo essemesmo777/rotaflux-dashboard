@@ -115,6 +115,7 @@ export function normalizeOperation(
   const vehicle = required(input.vehicle, "O veículo");
   const plate = required(input.plate ?? input.vehiclePlate, "A placa").toUpperCase();
   const driver = required(input.driver, "O motorista");
+  const driverUserId = text(input.driverUserId ?? input.driver_user_id) || null;
   const startOdometer = optionalNumber(input.startOdometer ?? input.kmInitial);
   const endOdometer = optionalNumber(input.endOdometer ?? input.kmFinal);
 
@@ -162,6 +163,7 @@ export function normalizeOperation(
     vehicle,
     plate,
     driver,
+    driverUserId,
     supervisor: text(input.supervisor),
     departureTime,
     arrivalTime,
@@ -207,6 +209,7 @@ export function operationToDatabase(record: NormalizedOperation, organizationId:
     vehicle: record.vehicle,
     plate: record.plate,
     driver: record.driver,
+    driver_user_id: record.driverUserId,
     supervisor: record.supervisor || null,
     origin: record.origin,
     destination: record.destination,
@@ -279,6 +282,7 @@ export function operationToClient(row: DbOperation, refuelingRows: DbRefueling[]
     vehicle: row.vehicle,
     plate: row.plate ?? row.vehicle,
     driver: row.driver,
+    driverUserId: row.driver_user_id ?? null,
     supervisor: row.supervisor ?? "",
     departureTime: typeof row.start_time === "string" ? row.start_time.slice(0, 5) : null,
     arrivalTime: typeof row.end_time === "string" ? row.end_time.slice(0, 5) : null,

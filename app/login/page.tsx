@@ -13,9 +13,8 @@ export default function LoginPage() {
     fetch("/api/auth/session", { cache: "no-store" }).then(async (response) => {
       if (!response.ok) return;
       const payload = await response.json();
-      window.location.replace(payload.profile?.must_change_password ? "/change-password" : "/");
+      window.location.replace(payload.profile?.must_change_password ? "/change-password" : payload.redirectTo || "/");
     }).catch(() => undefined);
-    fetch("/api/auth/bootstrap", { method: "POST" }).catch(() => undefined);
   }, []);
 
   async function submit(event: FormEvent) {
@@ -30,7 +29,7 @@ export default function LoginPage() {
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Não foi possível entrar.");
-      window.location.replace(payload.profile?.must_change_password ? "/change-password" : "/");
+      window.location.replace(payload.profile?.must_change_password ? "/change-password" : payload.redirectTo || "/");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Não foi possível entrar.");
       setLoading(false);

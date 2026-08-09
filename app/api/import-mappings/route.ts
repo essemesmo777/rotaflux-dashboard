@@ -1,5 +1,5 @@
 import { OPERATION_FIELDS, type OperationField } from "../../../lib/ocr-parser";
-import { requireSession, responseError, supabaseFetch } from "../../../lib/supabase-rest";
+import { canManageCompany, requireSession, responseError, supabaseFetch } from "../../../lib/supabase-rest";
 
 const ALLOWED_FIELDS = new Set<string>(OPERATION_FIELDS);
 
@@ -24,6 +24,7 @@ function validMappings(value: unknown) {
 export async function GET(request: Request) {
   const session = await requireSession(request);
   if (!session) return Response.json({ error: "Sessão expirada." }, { status: 401 });
+  if (!canManageCompany(session.profile.role)) return Response.json({ error: "Mapeamentos são restritos à administração da empresa." }, { status: 403 });
   const signature = validSignature(new URL(request.url).searchParams.get("signature"));
   if (!signature) return Response.json({ mapping: null });
   const response = await supabaseFetch(
@@ -38,6 +39,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const session = await requireSession(request);
   if (!session) return Response.json({ error: "Sessão expirada." }, { status: 401 });
+  if (!canManageCompany(session.profile.role)) return Response.json({ error: "Mapeamentos são restritos à administração da empresa." }, { status: 403 });
   const body = (await request.json().catch(() => null)) as { signature?: unknown; mappings?: unknown } | null;
   const signature = validSignature(body?.signature);
   const mappings = validMappings(body?.mappings);
@@ -59,4 +61,3 @@ export async function POST(request: Request) {
   if (!response.ok) return Response.json({ error: await responseError(response, "Não foi possível memorizar o mapeamento.") }, { status: 500 });
   return Response.json({ mapping: ((await response.json()) as unknown[])[0] ?? null });
 }
-

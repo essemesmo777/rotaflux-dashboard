@@ -95,6 +95,22 @@ a { color: inherit; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
 .secondary-action { min-height: 45px; padding: 0 16px; border: 1px solid #dbe1db; border-radius: 11px; background: white; color: #33423a; font-weight: 700; cursor: pointer; }
 .modal-actions .primary-action { width: auto; padding: 0 20px; }
+.title-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.section-heading { margin: 30px 0 12px; font-size: 19px; }
+.company-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+.company-card { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.company-card h3 { margin: 6px 0; font-size: 19px; }
+.company-card p { margin: 0; color: #748078; font-size: 13px; }
+.company-card > div:last-child { display: grid; justify-items: end; gap: 10px; }
+.driver-page { min-height: 100vh; overflow: auto; background: #f3f5f1; }
+.driver-main { width: min(880px, calc(100% - 32px)); margin: 34px auto 70px; }
+.driver-list { display: grid; gap: 14px; }
+.driver-card { background: white; border: 1px solid #e1e6e1; border-radius: 18px; padding: 20px; display: grid; grid-template-columns: minmax(220px, .8fr) 1.4fr; gap: 24px; }
+.driver-card span, .driver-card dt { color: #748078; font-size: 11px; font-weight: 750; text-transform: uppercase; letter-spacing: .06em; }
+.driver-card h2 { margin: 8px 0 5px; font-size: 21px; }
+.driver-card p { margin: 0; color: #68756d; }
+.driver-card dl { margin: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.driver-card dd { margin: 5px 0 0; font-weight: 750; }
 
 @media (max-width: 860px) {
   .auth-page { display: block; }
@@ -107,6 +123,8 @@ a { color: inherit; }
   .admin-table tr { padding: 14px 16px; border-top: 1px solid #edf0ec; }
   .admin-table td { border: 0; padding: 6px 0; }
   .admin-title { align-items: flex-start; flex-direction: column; }
+  .company-grid { grid-template-columns: 1fr; }
+  .driver-card { grid-template-columns: 1fr; }
 }
 @media (max-width: 560px) {
   .demo-bar { align-items: flex-start; flex-wrap: wrap; line-height: 1.4; }

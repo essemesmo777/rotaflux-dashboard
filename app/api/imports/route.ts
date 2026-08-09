@@ -6,7 +6,7 @@ import {
   type NormalizedOperation,
   type OperationSource,
 } from "../../../lib/operation-normalize";
-import { requireSession, responseError, supabaseFetch } from "../../../lib/supabase-rest";
+import { canManageCompany, requireSession, responseError, supabaseFetch } from "../../../lib/supabase-rest";
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const MAX_ROWS = 5000;
@@ -83,6 +83,7 @@ async function existingKeys(token: string) {
 export async function GET(request: Request) {
   const session = await requireSession(request);
   if (!session) return Response.json({ error: "Sessão expirada." }, { status: 401 });
+  if (!canManageCompany(session.profile.role)) return Response.json({ error: "Importações são restritas à administração da empresa." }, { status: 403 });
   const response = await supabaseFetch("/rest/v1/imports?select=*&order=created_at.desc&limit=100", { token: session.token });
   if (!response.ok) {
     return Response.json({ error: await responseError(response, "Não foi possível carregar as importações.") }, { status: 500 });
@@ -93,6 +94,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const session = await requireSession(request);
   if (!session) return Response.json({ error: "Sessão expirada." }, { status: 401 });
+  if (!canManageCompany(session.profile.role)) return Response.json({ error: "Importações são restritas à administração da empresa." }, { status: 403 });
   let storagePath = "";
   let importId = "";
 

@@ -9,12 +9,30 @@ export type UserProfile = {
   name: string;
   email: string;
   phone: string | null;
-  role: "SUPER_ADMIN" | "ADMIN" | "USER";
+  role: "SUPER_ADMIN" | "COMPANY_ADMIN" | "DRIVER";
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
   must_change_password: boolean;
   last_login_at: string | null;
   created_at: string;
+  organizations?: {
+    id: string;
+    name: string;
+    status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+    plan: string;
+  } | null;
 };
+
+export type AppRole = UserProfile["role"];
+
+export function homePathForRole(role: AppRole) {
+  if (role === "SUPER_ADMIN") return "/admin";
+  if (role === "DRIVER") return "/motorista";
+  return "/";
+}
+
+export function canManageCompany(role: AppRole) {
+  return role === "SUPER_ADMIN" || role === "COMPANY_ADMIN";
+}
 
 export type AuthSession = {
   access_token: string;
@@ -76,7 +94,7 @@ export async function getAuthUser(token: string) {
 
 export async function getUserProfile(token: string, userId: string) {
   const response = await supabaseFetch(
-    `/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=id,organization_id,name,email,phone,role,status,must_change_password,last_login_at,created_at`,
+    `/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=id,organization_id,name,email,phone,role,status,must_change_password,last_login_at,created_at,organizations(id,name,status,plan)`,
     { token, headers: { Accept: "application/json" } },
   );
   if (!response.ok) return null;
@@ -91,5 +109,25 @@ export async function requireSession(request: Request) {
   if (!user) return null;
   const profile = await getUserProfile(token, user.id);
   if (!profile || profile.status !== "ACTIVE") return null;
+  if (profile.role !== "SUPER_ADMIN" && profile.organizations?.status !== "ACTIVE") return null;
   return { token, user, profile };
+}
+
+export async function getAssignableDriver(token: string, organizationId: string, driverId: string) {
+  const response = await supabaseFetch(
+    `/rest/v1/profiles?id=eq.${encodeURIComponent(driverId)}&organization_id=eq.${encodeURIComponent(organizationId)}&role=eq.DRIVER&status=eq.ACTIVE&select=id,name,email`,
+    { token },
+  );
+  if (!response.ok) return null;
+  const rows = (await response.json()) as Array<{ id: string; name: string; email: string }>;
+  return rows[0] ?? null;
+}
+
+export async function listAssignableDrivers(token: string, organizationId: string) {
+  const response = await supabaseFetch(
+    `/rest/v1/profiles?organization_id=eq.${encodeURIComponent(organizationId)}&role=eq.DRIVER&status=eq.ACTIVE&select=id,name,email&order=name`,
+    { token },
+  );
+  if (!response.ok) return [];
+  return (await response.json()) as Array<{ id: string; name: string; email: string }>;
 }

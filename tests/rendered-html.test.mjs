@@ -14,13 +14,10 @@ async function render(pathname = "/") {
   );
 }
 
-test("server-renders the private RotaFlux access shell", async () => {
+test("server-enforces private RotaFlux routes and renders public access pages", async () => {
   const response = await render();
-  assert.equal(response.status, 200);
-  assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
-  const html = await response.text();
-  assert.match(html, /RotaFlux — Gestão de Rotas/);
-  assert.match(html, /Carregando sua operação/);
+  assert.equal(response.status, 307);
+  assert.equal(new URL(response.headers.get("location"), "http://localhost").pathname, "/login");
 
   const login = await render("/login");
   assert.equal(login.status, 200);
@@ -35,8 +32,8 @@ test("server-renders the private RotaFlux access shell", async () => {
   assert.match(demoHtml, /dashboard\.html\?demo=1/);
 
   const operations = await render("/operacoes");
-  assert.equal(operations.status, 200);
-  assert.match(await operations.text(), /Carregando operações/);
+  assert.equal(operations.status, 307);
+  assert.equal(new URL(operations.headers.get("location"), "http://localhost").pathname, "/login");
 
   const demoOperations = await render("/demo/operacoes");
   assert.equal(demoOperations.status, 200);
@@ -44,7 +41,7 @@ test("server-renders the private RotaFlux access shell", async () => {
 });
 
 test("keeps documents and calculated daily trips in isolated Supabase storage", async () => {
-  const [hosting, dashboard, operations, operationsRoute, importsRoute, ocrRoute, mappingRoute, parser, migration, operationsMigration, mappingMigration, refuelingsMigration, home, auth] = await Promise.all([
+  const [hosting, dashboard, operations, operationsRoute, importsRoute, ocrRoute, mappingRoute, parser, migration, operationsMigration, mappingMigration, refuelingsMigration, tenantMigration, home, auth] = await Promise.all([
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../public/dashboard.html", import.meta.url), "utf8"),
     readFile(new URL("../public/operations.html", import.meta.url), "utf8"),
@@ -57,6 +54,7 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
     readFile(new URL("../supabase/migrations/20260808150000_operations_control.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/20260808193942_ocr_import_mappings.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/20260808223000_multi_station_refuelings.sql", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/20260809110100_tenant_isolation_hardening.sql", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/supabase-rest.ts", import.meta.url), "utf8"),
   ]);
@@ -120,4 +118,12 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
   assert.match(refuelingsMigration, /create table public\.route_refuelings/);
   assert.match(refuelingsMigration, /enable row level security/);
   assert.match(refuelingsMigration, /grant select, insert, update, delete/);
+  assert.match(tenantMigration, /driver_user_id/);
+  assert.match(tenantMigration, /routes_driver_same_organization_fk/);
+  assert.match(tenantMigration, /private\.is_company_admin/);
+  assert.match(tenantMigration, /private\.is_driver/);
+  assert.match(tenantMigration, /force row level security/);
+  assert.match(tenantMigration, /from anon, authenticated/);
+  assert.match(tenantMigration, /target_organization_id is null/);
+  assert.doesNotMatch(tenantMigration, /where slug = 'rotaflux'/);
 });

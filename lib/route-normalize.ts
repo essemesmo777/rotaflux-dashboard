@@ -33,6 +33,7 @@ export function normalizeRoute(input: RouteInput, options?: { id?: string; impor
   const endOdometer = optionalNumeric(input.endOdometer);
   const route = String(input.route ?? "").trim();
   const driver = String(input.driver ?? "").trim();
+  const driverUserId = String(input.driverUserId ?? input.driver_user_id ?? "").trim() || null;
   const liters = optionalNumeric(input.liters);
   const revenue = optionalNumeric(input.revenue);
   const startTime = time(input.startTime);
@@ -54,6 +55,7 @@ export function normalizeRoute(input: RouteInput, options?: { id?: string; impor
     route,
     vehicle: String(input.vehicle || "Não informado").trim(),
     driver,
+    driverUserId,
     origin: String(input.origin || "").trim(),
     destination: String(input.destination || "").trim(),
     startOdometer,

@@ -3,6 +3,7 @@ import {
   appendSessionCookies,
   getAuthUser,
   getUserProfile,
+  homePathForRole,
   readCookie,
   supabaseFetch,
   type AuthSession,
@@ -43,8 +44,13 @@ export async function GET(request: Request) {
       { status: 403, headers },
     );
   }
+  if (profile.role !== "SUPER_ADMIN" && profile.organizations?.status !== "ACTIVE") {
+    const headers = new Headers();
+    appendClearedSessionCookies(headers, request);
+    return Response.json({ error: "O acesso da sua empresa está suspenso." }, { status: 403, headers });
+  }
 
   const headers = new Headers();
   if (refreshed) appendSessionCookies(headers, request, refreshed);
-  return Response.json({ authenticated: true, profile }, { headers });
+  return Response.json({ authenticated: true, profile, redirectTo: homePathForRole(profile.role) }, { headers });
 }

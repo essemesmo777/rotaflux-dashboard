@@ -1,10 +1,11 @@
-import { requireSession, supabaseFetch } from "../../../../lib/supabase-rest";
+import { canManageCompany, requireSession, supabaseFetch } from "../../../../lib/supabase-rest";
 
 type ImportRow = { file_name: string; storage_path: string; content_type: string; size_bytes: number };
 
 export async function GET(request: Request) {
   const session = await requireSession(request);
   if (!session) return Response.json({ error: "Sessão expirada." }, { status: 401 });
+  if (!canManageCompany(session.profile.role)) return Response.json({ error: "Arquivo restrito à administração da empresa." }, { status: 403 });
   const id = new URL(request.url).searchParams.get("id");
   if (!id) return Response.json({ error: "Importação não informada." }, { status: 400 });
 
