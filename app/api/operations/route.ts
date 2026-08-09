@@ -8,6 +8,7 @@ import {
 } from "../../../lib/operation-normalize";
 import {
   getAssignableDriver,
+  getAssignableDriverByAuthUser,
   listAssignableDrivers,
   requireSession,
   responseError,
@@ -36,19 +37,31 @@ function withRefuelings(rows: DbOperation[], refuelings: DbRefueling[]) {
   return rows.map((row) => operationToClient(row, grouped.get(String(row.id)) ?? []));
 }
 
-async function replaceRefuelings(token: string, record: NormalizedOperation, organizationId: string) {
-  const deletion = await supabaseFetch(`/rest/v1/route_refuelings?route_id=eq.${encodeURIComponent(record.id)}`, {
-    method: "DELETE",
-    token,
-  });
-  if (!deletion.ok) throw new Error(await responseError(deletion, "Não foi possível atualizar os abastecimentos."));
+async function replaceRefuelings(
+  token: string,
+  record: NormalizedOperation,
+  organizationId: string,
+  createdBy: string,
+) {
+  const current = await refuelingsForRoute(token, record.id);
+  const retained = new Set(record.refuelings.map((item) => item.id));
+  const removed = current.map((item) => String(item.id)).filter((id) => !retained.has(id));
+  if (removed.length) {
+    const deletion = await supabaseFetch(`/rest/v1/route_refuelings?id=in.(${removed.map(encodeURIComponent).join(",")})`, {
+      method: "DELETE",
+      token,
+    });
+    if (!deletion.ok) throw new Error(await responseError(deletion, "Não foi possível atualizar os abastecimentos."));
+  }
   if (!record.refuelings.length) return [];
 
-  const response = await supabaseFetch("/rest/v1/route_refuelings", {
+  const response = await supabaseFetch("/rest/v1/route_refuelings?on_conflict=id", {
     method: "POST",
     token,
-    headers: { "Content-Type": "application/json", Prefer: "return=representation" },
-    body: JSON.stringify(record.refuelings.map((item) => refuelingToDatabase(item, record.id, organizationId))),
+    headers: { "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify(record.refuelings.map((item) =>
+      refuelingToDatabase(item, record.id, organizationId, record.driverId, createdBy)
+    )),
   });
   if (!response.ok) throw new Error(await responseError(response, "Não foi possível salvar os abastecimentos."));
   return (await response.json()) as DbRefueling[];
@@ -83,11 +96,10 @@ async function resolveDriver(
   session: NonNullable<Awaited<ReturnType<typeof requireSession>>>,
   payload: Record<string, unknown>,
 ) {
-  const requestedId = session.profile.role === "DRIVER"
-    ? session.user.id
-    : String(payload.driverUserId ?? payload.driver_user_id ?? "");
-  if (!requestedId) throw new Error("Selecione um motorista ativo da empresa.");
-  const driver = await getAssignableDriver(session.token, session.profile.organization_id, requestedId);
+  const requestedId = String(payload.driverId ?? payload.driver_id ?? payload.driverUserId ?? "");
+  const driver = session.profile.role === "DRIVER"
+    ? await getAssignableDriverByAuthUser(session.token, session.profile.organization_id, session.user.id)
+    : requestedId ? await getAssignableDriver(session.token, session.profile.organization_id, requestedId) : null;
   if (!driver) throw new Error("O motorista informado não pertence à empresa ou está inativo.");
   return driver;
 }
@@ -128,7 +140,12 @@ export async function POST(request: Request) {
   try {
     const payload = (await request.json()) as Record<string, unknown>;
     const driver = await resolveDriver(session, payload);
-    const record = normalizeOperation({ ...payload, driver: driver.name, driverUserId: driver.id }, { source: "MANUAL" });
+    const record = normalizeOperation({
+      ...payload,
+      driver: driver.name,
+      driverId: driver.id,
+      driverUserId: driver.auth_user_id,
+    }, { source: "MANUAL" });
     const duplicate = await findDuplicate(session.token, record);
     if (duplicate && !record.duplicateOverride) {
       return Response.json(
@@ -149,7 +166,7 @@ export async function POST(request: Request) {
     let refuelings: DbRefueling[] = [];
     try {
       if (Object.hasOwn(payload, "refuelings")) {
-        refuelings = await replaceRefuelings(session.token, record, session.profile.organization_id);
+        refuelings = await replaceRefuelings(session.token, record, session.profile.organization_id, session.user.id);
       }
     } catch (error) {
       await supabaseFetch(`/rest/v1/routes?id=eq.${encodeURIComponent(record.id)}`, { method: "DELETE", token: session.token });
@@ -179,7 +196,8 @@ export async function PATCH(request: Request) {
     const merged = { ...currentClient, ...payload };
     const driver = await resolveDriver(session, merged);
     merged.driver = driver.name;
-    merged.driverUserId = driver.id;
+    merged.driverId = driver.id;
+    merged.driverUserId = driver.auth_user_id;
     if (!Object.hasOwn(payload, "refuelings") && !currentRefuelings.length) delete merged.refuelings;
     const source = String(current.source ?? "MANUAL") as "MANUAL" | "EXCEL" | "CSV" | "PDF" | "IMAGE";
     const record = normalizeOperation({ ...merged, source }, {
@@ -213,7 +231,7 @@ export async function PATCH(request: Request) {
     const [updated] = (await response.json()) as DbOperation[];
     if (!updated) return Response.json({ error: "Você não tem permissão para editar esta operação." }, { status: 403 });
     const refuelings = Object.hasOwn(payload, "refuelings")
-      ? await replaceRefuelings(session.token, record, String(current.organization_id))
+      ? await replaceRefuelings(session.token, record, String(current.organization_id), session.user.id)
       : currentRefuelings;
     return Response.json({ operation: operationToClient(updated, refuelings) });
   } catch (error) {

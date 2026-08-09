@@ -1,3 +1,5 @@
+import { calculateRefuelingValues, parseBrazilianNumber, roundFuelValue } from "./refueling-calculator.ts";
+
 export type OperationSource = "MANUAL" | "EXCEL" | "CSV" | "PDF" | "IMAGE";
 
 type OperationInput = Record<string, unknown>;
@@ -11,6 +13,13 @@ export type NormalizedRefueling = {
   liters: number;
   pricePerLiter: number;
   amountPaid: number;
+  refueledOn: string;
+  refueledTime: string | null;
+  fuelType: "DIESEL" | "DIESEL_S10" | "GASOLINE" | "ETHANOL" | "ARLA32" | "OTHER";
+  fillType: "FULL" | "PARTIAL";
+  notes: string;
+  receiptStoragePath: string | null;
+  pumpStoragePath: string | null;
 };
 
 function text(value: unknown) {
@@ -18,9 +27,7 @@ function text(value: unknown) {
 }
 
 function optionalNumber(value: unknown) {
-  if (value === null || value === undefined || value === "") return null;
-  const parsed = Number(String(value).replace(",", "."));
-  return Number.isFinite(parsed) ? parsed : null;
+  return parseBrazilianNumber(value);
 }
 
 function nonNegative(value: unknown, fallback = 0) {
@@ -28,38 +35,45 @@ function nonNegative(value: unknown, fallback = 0) {
   return parsed === null ? fallback : Math.max(0, parsed);
 }
 
-function rounded(value: number, digits: number) {
-  const factor = 10 ** digits;
-  return Math.round((value + Number.EPSILON) * factor) / factor;
-}
+const rounded = roundFuelValue;
 
-function normalizeRefuelings(value: unknown, startOdometer: number, endOdometer: number) {
+function normalizeRefuelings(value: unknown, startOdometer: number, endOdometer: number, defaultDate: string) {
   if (!Array.isArray(value)) return null;
   return value.map((item, index): NormalizedRefueling => {
     const row = item && typeof item === "object" ? (item as OperationInput) : {};
     const stationName = required(row.stationName ?? row.station, `O posto do abastecimento ${index + 1}`);
     const odometer = optionalNumber(row.odometer ?? row.refuelOdometer);
-    const liters = optionalNumber(row.liters);
-    const pricePerLiter = optionalNumber(row.pricePerLiter ?? row.literPrice);
-    const informedAmount = optionalNumber(row.amountPaid ?? row.totalPaid);
+    const calculated = calculateRefuelingValues({
+      liters: row.liters,
+      pricePerLiter: row.pricePerLiter ?? row.literPrice,
+      amountPaid: row.amountPaid ?? row.totalPaid,
+    }, row.editedFields ?? row._editedFields);
 
     if (odometer === null || odometer < startOdometer || odometer > endOdometer) {
       throw new Error(`Informe o odômetro do abastecimento ${index + 1} entre o KM inicial e o KM final.`);
     }
-    if (liters === null || liters <= 0) throw new Error(`Informe os litros do abastecimento ${index + 1}.`);
-    if (pricePerLiter === null || pricePerLiter <= 0) {
-      throw new Error(`Informe o valor por litro do abastecimento ${index + 1}.`);
-    }
-    const amountPaid = informedAmount ?? rounded(liters * pricePerLiter, 2);
-    if (amountPaid <= 0) throw new Error(`Informe o valor pago no abastecimento ${index + 1}.`);
+    const refueledOn = text(row.refueledOn ?? row.date) || defaultDate;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(refueledOn)) throw new Error(`Informe a data do abastecimento ${index + 1}.`);
+    const refueledTime = normalizedTime(row.refueledTime ?? row.time);
+    const fuelTypeInput = text(row.fuelType).toUpperCase();
+    const fuelType = (["DIESEL", "DIESEL_S10", "GASOLINE", "ETHANOL", "ARLA32", "OTHER"].includes(fuelTypeInput)
+      ? fuelTypeInput : "DIESEL") as NormalizedRefueling["fuelType"];
+    const fillType = (text(row.fillType).toUpperCase() === "FULL" ? "FULL" : "PARTIAL") as NormalizedRefueling["fillType"];
 
     return {
       id: text(row.id) || crypto.randomUUID(),
       stationName,
       odometer: rounded(odometer, 1),
-      liters: rounded(liters, 3),
-      pricePerLiter: rounded(pricePerLiter, 3),
-      amountPaid: rounded(amountPaid, 2),
+      liters: calculated.liters,
+      pricePerLiter: calculated.pricePerLiter,
+      amountPaid: calculated.amountPaid,
+      refueledOn,
+      refueledTime,
+      fuelType,
+      fillType,
+      notes: text(row.notes),
+      receiptStoragePath: text(row.receiptStoragePath) || null,
+      pumpStoragePath: text(row.pumpStoragePath) || null,
     };
   });
 }
@@ -115,6 +129,7 @@ export function normalizeOperation(
   const vehicle = required(input.vehicle, "O veículo");
   const plate = required(input.plate ?? input.vehiclePlate, "A placa").toUpperCase();
   const driver = required(input.driver, "O motorista");
+  const driverId = text(input.driverId ?? input.driver_id) || null;
   const driverUserId = text(input.driverUserId ?? input.driver_user_id) || null;
   const startOdometer = optionalNumber(input.startOdometer ?? input.kmInitial);
   const endOdometer = optionalNumber(input.endOdometer ?? input.kmFinal);
@@ -127,7 +142,7 @@ export function normalizeOperation(
   const km = Math.round((endOdometer - startOdometer) * 10) / 10;
   const departureTime = normalizedTime(input.departureTime ?? input.startTime);
   const arrivalTime = normalizedTime(input.arrivalTime ?? input.endTime);
-  const refuelings = normalizeRefuelings(input.refuelings, startOdometer, endOdometer);
+  const refuelings = normalizeRefuelings(input.refuelings, startOdometer, endOdometer, date);
   const hasDetailedRefuelings = refuelings !== null;
   const refueled = booleanValue(input.refueled ?? input.refuel) || Boolean(refuelings?.length);
   const legacyRefuelOdometer = optionalNumber(input.refuelOdometer ?? input.fuelOdometer);
@@ -163,6 +178,7 @@ export function normalizeOperation(
     vehicle,
     plate,
     driver,
+    driverId,
     driverUserId,
     supervisor: text(input.supervisor),
     departureTime,
@@ -209,6 +225,7 @@ export function operationToDatabase(record: NormalizedOperation, organizationId:
     vehicle: record.vehicle,
     plate: record.plate,
     driver: record.driver,
+    driver_id: record.driverId,
     driver_user_id: record.driverUserId,
     supervisor: record.supervisor || null,
     origin: record.origin,
@@ -239,7 +256,13 @@ export function operationToDatabase(record: NormalizedOperation, organizationId:
   };
 }
 
-export function refuelingToDatabase(record: NormalizedRefueling, routeId: string, organizationId: string) {
+export function refuelingToDatabase(
+  record: NormalizedRefueling,
+  routeId: string,
+  organizationId: string,
+  driverId: string | null = null,
+  createdBy: string | null = null,
+) {
   return {
     id: record.id,
     organization_id: organizationId,
@@ -249,6 +272,15 @@ export function refuelingToDatabase(record: NormalizedRefueling, routeId: string
     liters: record.liters,
     price_per_liter: record.pricePerLiter,
     amount_paid: record.amountPaid,
+    refueled_on: record.refueledOn,
+    refueled_time: record.refueledTime,
+    fuel_type: record.fuelType,
+    fill_type: record.fillType,
+    notes: record.notes || null,
+    receipt_storage_path: record.receiptStoragePath,
+    pump_storage_path: record.pumpStoragePath,
+    driver_id: driverId,
+    created_by: createdBy,
   };
 }
 
@@ -260,6 +292,13 @@ export function refuelingToClient(row: DbRefueling) {
     liters: Number(row.liters),
     pricePerLiter: Number(row.price_per_liter),
     amountPaid: Number(row.amount_paid),
+    refueledOn: row.refueled_on ?? null,
+    refueledTime: typeof row.refueled_time === "string" ? row.refueled_time.slice(0, 5) : null,
+    fuelType: row.fuel_type ?? "DIESEL",
+    fillType: row.fill_type ?? "PARTIAL",
+    notes: row.notes ?? "",
+    receiptStoragePath: row.receipt_storage_path ?? null,
+    pumpStoragePath: row.pump_storage_path ?? null,
   };
 }
 
@@ -282,6 +321,7 @@ export function operationToClient(row: DbOperation, refuelingRows: DbRefueling[]
     vehicle: row.vehicle,
     plate: row.plate ?? row.vehicle,
     driver: row.driver,
+    driverId: row.driver_id ?? null,
     driverUserId: row.driver_user_id ?? null,
     supervisor: row.supervisor ?? "",
     departureTime: typeof row.start_time === "string" ? row.start_time.slice(0, 5) : null,

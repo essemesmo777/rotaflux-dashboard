@@ -1,6 +1,7 @@
 import { normalizeRoute } from "../../../lib/route-normalize";
 import {
   getAssignableDriver,
+  getAssignableDriverByAuthUser,
   listAssignableDrivers,
   requireSession,
   responseError,
@@ -18,6 +19,7 @@ function toClient(row: DbRoute) {
     vehicle: row.vehicle,
     plate: row.plate ?? row.vehicle,
     driver: row.driver,
+    driverId: row.driver_id ?? null,
     driverUserId: row.driver_user_id ?? null,
     origin: row.origin ?? "",
     destination: row.destination ?? "",
@@ -49,6 +51,7 @@ function toDatabase(record: ReturnType<typeof normalizeRoute>, organizationId: s
     vehicle: record.vehicle,
     plate: record.vehicle,
     driver: record.driver,
+    driver_id: record.driverId,
     driver_user_id: record.driverUserId,
     origin: record.origin,
     destination: record.destination,
@@ -78,11 +81,10 @@ async function resolveDriver(
   session: NonNullable<Awaited<ReturnType<typeof authenticated>>>,
   payload: Record<string, unknown>,
 ) {
-  const requestedId = session.profile.role === "DRIVER"
-    ? session.user.id
-    : String(payload.driverUserId ?? payload.driver_user_id ?? "");
-  if (!requestedId) throw new Error("Selecione um motorista ativo da empresa.");
-  const driver = await getAssignableDriver(session.token, session.profile.organization_id, requestedId);
+  const requestedId = String(payload.driverId ?? payload.driver_id ?? payload.driverUserId ?? "");
+  const driver = session.profile.role === "DRIVER"
+    ? await getAssignableDriverByAuthUser(session.token, session.profile.organization_id, session.user.id)
+    : requestedId ? await getAssignableDriver(session.token, session.profile.organization_id, requestedId) : null;
   if (!driver) throw new Error("O motorista informado não pertence à empresa ou está inativo.");
   return driver;
 }
@@ -106,7 +108,7 @@ export async function POST(request: Request) {
   try {
     const payload = (await request.json()) as Record<string, unknown>;
     const driver = await resolveDriver(session, payload);
-    const record = normalizeRoute({ ...payload, driver: driver.name, driverUserId: driver.id });
+    const record = normalizeRoute({ ...payload, driver: driver.name, driverId: driver.id, driverUserId: driver.auth_user_id });
     const response = await supabaseFetch("/rest/v1/routes", {
       method: "POST",
       token: session.token,
@@ -129,7 +131,7 @@ export async function PATCH(request: Request) {
     const id = String(payload.id || "");
     if (!id) return Response.json({ error: "Identificador da rota ausente." }, { status: 400 });
     const driver = await resolveDriver(session, payload);
-    const record = normalizeRoute({ ...payload, driver: driver.name, driverUserId: driver.id }, { id });
+    const record = normalizeRoute({ ...payload, driver: driver.name, driverId: driver.id, driverUserId: driver.auth_user_id }, { id });
     const database = toDatabase(record, session.profile.organization_id, session.user.id);
     delete (database as Partial<typeof database>).id;
     delete (database as Partial<typeof database>).import_id;
