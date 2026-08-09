@@ -215,7 +215,7 @@ export async function POST(request: Request) {
     }
 
     return Response.json(
-      { import: importToClient(createdImport), operations: createdOperations.map(operationToClient) },
+      { import: importToClient(createdImport), operations: createdOperations.map((row) => operationToClient(row)) },
       { status: 201 },
     );
   } catch (error) {

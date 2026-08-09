@@ -93,7 +93,7 @@ test("requires a complete detailed refueling when the new list is supplied", () 
       ...complete,
       refuelings: [{ stationName: "Posto Norte", odometer: 128500, liters: 30, pricePerLiter: 0 }],
     }),
-    /valor por litro/,
+    /maiores que zero/,
   );
 });
 

@@ -41,7 +41,7 @@ test("server-enforces private RotaFlux routes and renders public access pages", 
 });
 
 test("keeps documents and calculated daily trips in isolated Supabase storage", async () => {
-  const [hosting, dashboard, operations, operationsRoute, importsRoute, ocrRoute, mappingRoute, parser, migration, operationsMigration, mappingMigration, refuelingsMigration, tenantMigration, home, auth] = await Promise.all([
+  const [hosting, dashboard, operations, operationsRoute, importsRoute, ocrRoute, mappingRoute, parser, migration, operationsMigration, mappingMigration, refuelingsMigration, tenantMigration, fuelDriverMigration, driversUi, driverPage, home, auth] = await Promise.all([
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../public/dashboard.html", import.meta.url), "utf8"),
     readFile(new URL("../public/operations.html", import.meta.url), "utf8"),
@@ -55,6 +55,9 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
     readFile(new URL("../supabase/migrations/20260808193942_ocr_import_mappings.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/20260808223000_multi_station_refuelings.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/20260809110100_tenant_isolation_hardening.sql", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/20260809143000_refueling_and_internal_drivers.sql", import.meta.url), "utf8"),
+    readFile(new URL("../components/access-management.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/motorista/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/supabase-rest.ts", import.meta.url), "utf8"),
   ]);
@@ -96,6 +99,9 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
   assert.match(operations, /Valor pago para abastecer/);
   assert.match(operations, /Abastecimentos da operação/);
   assert.match(operations, /data-refueling-field="pricePerLiter"/);
+  assert.match(operations, /data-refueling-field="amountPaid"/);
+  assert.match(operations, /calculateRefuelingCard/);
+  assert.match(operations, /Foto da bomba/);
   assert.match(operationsRoute, /operationDuplicateKey/);
   assert.match(operationsRoute, /route_refuelings/);
   assert.match(operationsRoute, /Possível duplicidade/);
@@ -126,4 +132,12 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
   assert.match(tenantMigration, /from anon, authenticated/);
   assert.match(tenantMigration, /target_organization_id is null/);
   assert.doesNotMatch(tenantMigration, /where slug = 'rotaflux'/);
+  assert.match(fuelDriverMigration, /create table if not exists public\.drivers/);
+  assert.match(fuelDriverMigration, /route_refuelings_value_consistency_check/);
+  assert.match(fuelDriverMigration, /fuel-receipts/);
+  assert.match(fuelDriverMigration, /force row level security/);
+  assert.match(driversUi, /não envia convite por e-mail/);
+  assert.match(driversUi, /Cadastrar motorista/);
+  assert.match(driverPage, /Lançar abastecimento/);
+  assert.match(driverPage, /calculateRefuelingValues/);
 });

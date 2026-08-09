@@ -115,19 +115,29 @@ export async function requireSession(request: Request) {
 
 export async function getAssignableDriver(token: string, organizationId: string, driverId: string) {
   const response = await supabaseFetch(
-    `/rest/v1/profiles?id=eq.${encodeURIComponent(driverId)}&organization_id=eq.${encodeURIComponent(organizationId)}&role=eq.DRIVER&status=eq.ACTIVE&select=id,name,email`,
+    `/rest/v1/drivers?id=eq.${encodeURIComponent(driverId)}&organization_id=eq.${encodeURIComponent(organizationId)}&status=eq.ACTIVE&select=id,name,phone,auth_user_id`,
     { token },
   );
   if (!response.ok) return null;
-  const rows = (await response.json()) as Array<{ id: string; name: string; email: string }>;
+  const rows = (await response.json()) as Array<{ id: string; name: string; phone: string | null; auth_user_id: string | null }>;
+  return rows[0] ?? null;
+}
+
+export async function getAssignableDriverByAuthUser(token: string, organizationId: string, authUserId: string) {
+  const response = await supabaseFetch(
+    `/rest/v1/drivers?auth_user_id=eq.${encodeURIComponent(authUserId)}&organization_id=eq.${encodeURIComponent(organizationId)}&status=eq.ACTIVE&select=id,name,phone,auth_user_id`,
+    { token },
+  );
+  if (!response.ok) return null;
+  const rows = (await response.json()) as Array<{ id: string; name: string; phone: string | null; auth_user_id: string | null }>;
   return rows[0] ?? null;
 }
 
 export async function listAssignableDrivers(token: string, organizationId: string) {
   const response = await supabaseFetch(
-    `/rest/v1/profiles?organization_id=eq.${encodeURIComponent(organizationId)}&role=eq.DRIVER&status=eq.ACTIVE&select=id,name,email&order=name`,
+    `/rest/v1/drivers?organization_id=eq.${encodeURIComponent(organizationId)}&status=eq.ACTIVE&select=id,name,phone,auth_user_id&order=name`,
     { token },
   );
   if (!response.ok) return [];
-  return (await response.json()) as Array<{ id: string; name: string; email: string }>;
+  return (await response.json()) as Array<{ id: string; name: string; phone: string | null; auth_user_id: string | null }>;
 }
