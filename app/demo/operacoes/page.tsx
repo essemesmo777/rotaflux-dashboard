@@ -1,3 +1,5 @@
+import LazyFrame from "../../../components/lazy-frame";
+
 export default function DemoOperationsPage() {
   return (
     <main className="demo-shell">
@@ -6,7 +8,7 @@ export default function DemoOperationsPage() {
         <span>Você está explorando dados fictícios em um ambiente somente para visualização.</span>
         <a href="/login">Entrar na minha conta</a>
       </div>
-      <iframe className="dashboard-frame" src="/operations.html?demo=1" title="Demonstração das operações RotaFlux" />
+      <LazyFrame source="/operations.html?demo=1" title="Demonstração das operações RotaFlux" />
     </main>
   );
 }

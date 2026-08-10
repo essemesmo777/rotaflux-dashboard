@@ -46,7 +46,7 @@ export default function ForgotPasswordPage() {
           ) : (
             <form onSubmit={submit}>
               <div className="form-group"><label htmlFor="email">E-mail</label><input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@empresa.com" required /></div>
-              <button className="primary-action" disabled={loading}>{loading ? "Enviando…" : "Enviar link de recuperação"}</button>
+              <button className="primary-action" disabled={loading} aria-busy={loading}>{loading ? <span className="button-progress"><span className="button-spinner" aria-hidden="true" />Enviando…</span> : "Enviar link de recuperação"}</button>
             </form>
           )}
           {!sent && <a className="form-link" style={{ textAlign: "center", marginTop: 22 }} href="/login">Voltar ao login</a>}
