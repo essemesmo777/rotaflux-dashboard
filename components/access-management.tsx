@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 
 type Role = "SUPER_ADMIN" | "COMPANY_ADMIN" | "DRIVER";
 type Status = "ACTIVE" | "INACTIVE" | "SUSPENDED";
@@ -122,10 +121,7 @@ export default function AccessManagement({ mode }: { mode: "platform" | "company
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Não foi possível atualizar a empresa."); }
   }
 
-  async function logout() { await fetch("/api/auth/logout", { method: "POST" }); window.location.replace("/login"); }
-
   return <main className="admin-page">
-    <header className="admin-header"><div className="auth-brand"><span className="brand-mark">R</span><span>{mode === "platform" ? "RotaFlux · Plataforma" : "RotaFlux · Empresa"}</span></div><nav>{mode === "company" && <Link href="/">Dashboard</Link>}<button onClick={logout}>Sair</button></nav></header>
     <section className="admin-main">
       <div className="admin-title"><div><h1>{mode === "platform" ? "Administração global" : "Motoristas da empresa"}</h1><p>{mode === "platform" ? "Empresas, responsáveis e acessos isolados por tenant." : "Cadastre os motoristas da empresa pelo nome, sem convite ou e-mail obrigatório."}</p></div><div className="title-actions">{mode === "platform" && <button className="secondary-action" onClick={() => { setCompanyForm(emptyCompany); setCompanyModal(true); }}>+ Nova empresa</button>}<button className="primary-action" onClick={() => openUser()}>+ {mode === "company" ? "Cadastrar motorista" : "Novo usuário"}</button></div></div>
       {error && <div className="form-error" role="alert">{error}</div>}{notice && <div className="form-success" role="status">{notice}</div>}

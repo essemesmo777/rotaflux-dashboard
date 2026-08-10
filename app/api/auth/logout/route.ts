@@ -1,4 +1,4 @@
-import { appendClearedSessionCookies, readCookie, supabaseFetch } from "../../../../lib/supabase-rest";
+import { appendClearedSessionCookies, readCookie, supabaseFetch } from "../../../../lib/supabase-rest.ts";
 
 export async function POST(request: Request) {
   const token = readCookie(request, "rotaflux_access");
