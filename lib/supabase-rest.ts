@@ -24,11 +24,7 @@ export type UserProfile = {
 
 export type AppRole = UserProfile["role"];
 
-export function homePathForRole(role: AppRole) {
-  if (role === "SUPER_ADMIN") return "/admin";
-  if (role === "DRIVER") return "/motorista";
-  return "/";
-}
+export { homePathForRole } from "./auth-navigation.ts";
 
 export function canManageCompany(role: AppRole) {
   return role === "SUPER_ADMIN" || role === "COMPANY_ADMIN";

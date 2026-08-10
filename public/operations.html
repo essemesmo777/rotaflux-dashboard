@@ -24,12 +24,14 @@
     @media(max-width:1100px){.metrics{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr 1fr}.refueling-grid{grid-template-columns:1fr 1fr}.upload-grid{grid-template-columns:1fr}.camera-card{min-height:220px}.detail-grid{grid-template-columns:1fr 1fr}}
     @media(max-width:800px){.sidebar{transform:translateX(-100%);transition:.2s;box-shadow:20px 0 55px rgba(0,0,0,.25)}.sidebar.open{transform:none}.main{margin-left:0}.icon-btn.mobile-menu{display:grid}.topbar{height:67px}.content{padding-top:22px}.page-head{align-items:flex-start;flex-direction:column}.page-head .head-actions{width:100%}.page-head .btn{flex:1}.toolbar{align-items:stretch;flex-wrap:wrap}.search{min-width:100%;width:100%}.filter{flex:1}.modal-backdrop{padding:0}.modal,.modal.small,.modal.wide{width:100%;max-height:100vh;height:100vh;border-radius:0}.modal-head,.modal-foot{position:sticky}.form-grid,.refueling-grid{grid-template-columns:1fr}.field.two{grid-column:auto}.review-summary{grid-template-columns:1fr 1fr}.detail-grid{grid-template-columns:1fr}.detail-item.wide{grid-column:auto}.refuelings-head{align-items:flex-start;flex-direction:column}.refuelings-head .btn{width:100%}}
     @media(max-width:520px){.metrics{grid-template-columns:1fr 1fr;gap:8px}.metric{padding:14px}.metric strong{font-size:18px}.top-title p{display:none}.head-actions{width:100%}.head-actions .btn{min-width:calc(50% - 5px)}.modal-body{padding:17px}.modal-head{padding:17px}.modal-foot{padding:12px 17px;align-items:stretch;flex-direction:column}.modal-foot .modal-actions{width:100%;margin:0}.modal-foot .btn{flex:1}.review-summary{grid-template-columns:1fr 1fr}.upload-grid{display:block}.camera-card{margin-top:12px}.detail-grid{grid-template-columns:1fr}.debug-grid{grid-template-columns:1fr}}
+    .brand{text-decoration:none}.logout-nav{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.09);color:#ffc9c9}.logout-nav:hover{color:#fff;background:rgba(144,35,35,.24)}.breadcrumbs{display:flex;align-items:center;gap:7px;margin-bottom:18px;color:var(--muted);font-size:10px}.breadcrumbs a{color:var(--green);font-weight:800;text-decoration:none}.breadcrumbs a:hover{text-decoration:underline;text-underline-offset:3px}.dashboard-return{white-space:nowrap}
+    @media(max-width:800px){.dashboard-return{min-height:39px;padding:0 11px}.dashboard-return span{display:none}}
   </style>
 </head>
 <body>
   <div class="app">
     <aside class="sidebar" id="sidebar" aria-label="Navegação principal">
-      <div class="brand"><span class="brand-mark"><i data-lucide="route"></i></span> RotaFlux</div>
+      <a class="brand" id="brandHome" href="/" target="_top" aria-label="RotaFlux — ir para a Dashboard"><span class="brand-mark"><i data-lucide="route"></i></span> RotaFlux</a>
       <div class="nav-label">Operação</div>
       <nav class="nav">
         <a class="nav-btn" id="overviewLink" href="/" target="_top"><i data-lucide="layout-dashboard"></i> Visão geral</a>
@@ -45,12 +47,14 @@
       <div class="sidebar-foot">
         <div class="secure-note"><strong>Dados unificados</strong>Cadastros e documentos alimentam o mesmo banco e atualizam o dashboard.</div>
         <div class="profile"><span class="avatar" id="profileAvatar">RF</span><span class="profile-meta"><strong id="profileName">Carregando…</strong><span id="profileRole">RotaFlux</span></span></div>
+        <button class="nav-btn logout-nav" id="logoutBtn" type="button"><i data-lucide="log-out"></i> Sair da conta</button>
       </div>
     </aside>
 
     <main class="main">
-      <header class="topbar"><button class="icon-btn mobile-menu" id="menuBtn" aria-label="Abrir menu"><i data-lucide="menu"></i></button><div class="top-title"><h1>Controle operacional</h1><p>Jornadas, odômetros e abastecimentos em um só lugar.</p></div><div class="top-spacer"></div><button class="icon-btn" id="refreshBtn" aria-label="Atualizar dados"><i data-lucide="refresh-cw"></i></button></header>
+      <header class="topbar"><button class="icon-btn mobile-menu" id="menuBtn" aria-label="Abrir menu"><i data-lucide="menu"></i></button><a class="btn dashboard-return" id="dashboardReturn" href="/" target="_top" aria-label="Voltar para Dashboard"><i data-lucide="arrow-left"></i><span>Voltar para Dashboard</span></a><div class="top-title"><h1>Controle operacional</h1><p>Jornadas, odômetros e abastecimentos em um só lugar.</p></div><div class="top-spacer"></div><button class="icon-btn" id="refreshBtn" aria-label="Atualizar dados"><i data-lucide="refresh-cw"></i></button></header>
       <div class="content">
+        <nav class="breadcrumbs" aria-label="Navegação estrutural"><a id="breadcrumbDashboard" href="/" target="_top">Dashboard</a><span aria-hidden="true">›</span><span aria-current="page">Operações</span></nav>
         <section class="page-head"><div><div class="eyebrow">Gestão diária</div><h2>Operações</h2><p>Registre a jornada manualmente ou extraia os dados de um documento.</p></div><div class="head-actions"><button class="btn" id="importBtn"><i data-lucide="file-up"></i> Importar arquivo</button><button class="btn primary" id="newBtn"><i data-lucide="plus"></i> Nova operação</button></div></section>
         <section class="metrics" aria-label="Indicadores das operações">
           <article class="metric"><div class="metric-top"><span class="metric-icon"><i data-lucide="clipboard-check"></i></span></div><label>Operações</label><strong id="metricCount">0</strong><small id="metricPeriod">no período filtrado</small></article>
@@ -109,6 +113,7 @@
   <div class="modal-backdrop hidden" id="detailModal" role="dialog" aria-modal="true" aria-labelledby="detailTitle"><div class="modal small"><div class="modal-head"><div><h3 id="detailTitle">Detalhes da operação</h3><p>Registro completo e origem do lançamento.</p></div><button class="close-btn" data-close-detail><i data-lucide="x"></i></button></div><div class="modal-body"><div class="detail-grid" id="detailGrid"></div></div><div class="modal-foot"><span></span><button class="btn" data-close-detail>Fechar</button></div></div></div>
   <div class="toast-wrap" id="toasts" aria-live="polite"></div>
 
+  <script src="/authenticated-navigation.js"></script>
   <script>
   (()=>{
     const params=new URLSearchParams(location.search);const demoMode=params.get('demo')==='1';const qaMode=['localhost','127.0.0.1'].includes(location.hostname)&&params.get('qa')==='1';
@@ -213,6 +218,19 @@
     function init(){wire();wireRefuelingAutomation();refreshIcons();loadData();if(new URLSearchParams(location.search).get('tab')==='imports'&&!demoMode)setTimeout(openImport,350)}
     document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init):init();
   })();
+  </script>
+  <script>
+    (() => {
+      const demo = new URLSearchParams(location.search).get('demo') === '1';
+      const logoutButton = document.getElementById('logoutBtn');
+      logoutButton.onclick = () => window.RotaFluxNavigation.logout({ demoMode: demo });
+      if (demo) {
+        document.getElementById('brandHome').href = '/demo';
+        document.getElementById('dashboardReturn').href = '/demo';
+        document.getElementById('breadcrumbDashboard').href = '/demo';
+        logoutButton.classList.add('hidden');
+      }
+    })();
   </script>
 </body>
 </html>

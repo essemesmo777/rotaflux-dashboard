@@ -60,6 +60,41 @@ a { color: inherit; }
 .demo-bar a { margin-left: 4px; color: #fff; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
 .demo-shell .dashboard-frame { min-height: 0; height: 100%; }
 
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.authenticated-layout { height: 100vh; overflow: auto; background: #f3f5f1; }
+.authenticated-header { min-height: 72px; padding: 0 clamp(18px, 3vw, 44px); display: flex; align-items: center; gap: 18px; position: sticky; top: 0; z-index: 35; color: #fff; background: #173f2c; box-shadow: 0 6px 22px rgba(12, 38, 25, .12); }
+.authenticated-brand { display: inline-flex; align-items: center; gap: 11px; flex: 0 0 auto; color: #fff; font-size: 19px; font-weight: 900; letter-spacing: -.45px; text-decoration: none; }
+.authenticated-brand .brand-mark { width: 37px; height: 37px; border-radius: 11px; color: #173f2c; background: #c8ff4b; box-shadow: none; font-size: 18px; }
+.authenticated-brand:focus-visible, .authenticated-header a:focus-visible, .authenticated-header button:focus-visible { outline: 3px solid rgba(200,255,75,.5); outline-offset: 3px; }
+.desktop-dashboard-back { margin-left: 8px; }
+.mobile-dashboard-back { display: none; }
+.dashboard-button { min-height: 40px; padding: 0 13px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid rgba(255,255,255,.22); border-radius: 10px; color: #fff; background: rgba(255,255,255,.06); font-size: 12px; font-weight: 800; text-decoration: none; white-space: nowrap; }
+.dashboard-button:hover { background: rgba(255,255,255,.12); }
+.authenticated-menu { min-width: 0; flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 18px; }
+.authenticated-menu nav { display: flex; align-items: center; gap: 5px; }
+.authenticated-menu nav > a { min-height: 38px; padding: 0 11px; display: inline-flex; align-items: center; gap: 7px; border-radius: 9px; color: rgba(255,255,255,.72); font-size: 12px; font-weight: 750; text-decoration: none; }
+.authenticated-menu nav > a:hover, .authenticated-menu nav > a[aria-current="page"] { color: #fff; background: rgba(255,255,255,.09); }
+.authenticated-menu nav svg, .logout-button svg, .confirm-logout svg, .logout-dialog-icon svg { width: 17px; height: 17px; }
+.authenticated-account { padding-left: 16px; display: flex; align-items: center; gap: 11px; border-left: 1px solid rgba(255,255,255,.15); }
+.authenticated-account > span { max-width: 150px; overflow: hidden; color: rgba(255,255,255,.76); font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.logout-button { min-height: 40px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(255,170,170,.28); border-radius: 10px; color: #ffd5d5; background: rgba(132,20,20,.16); font-size: 12px; font-weight: 800; cursor: pointer; }
+.logout-button:hover { color: #fff; background: rgba(164,32,32,.28); }
+.authenticated-menu-button { display: none; width: 42px; height: 42px; margin-left: auto; border: 1px solid rgba(255,255,255,.2); border-radius: 10px; color: #fff; background: rgba(255,255,255,.08); cursor: pointer; }
+.authenticated-breadcrumbs { width: min(1180px, calc(100% - 40px)); margin: 18px auto -18px; display: flex; align-items: center; gap: 7px; color: #6c776f; font-size: 12px; }
+.authenticated-breadcrumbs > span { display: inline-flex; align-items: center; gap: 7px; }
+.authenticated-breadcrumbs a { color: #246841; font-weight: 750; text-decoration: none; }
+.authenticated-breadcrumbs a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.breadcrumb-separator { color: #9ca49e; }
+.logout-backdrop { position: fixed; inset: 0; z-index: 100; padding: 20px; display: grid; place-items: center; background: rgba(5,18,11,.64); backdrop-filter: blur(5px); }
+.logout-dialog { width: min(430px, 100%); padding: 28px; border-radius: 19px; color: #17231b; background: #fff; box-shadow: 0 30px 90px rgba(0,0,0,.3); }
+.logout-dialog-icon { width: 43px; height: 43px; display: grid; place-items: center; border-radius: 12px; color: #a52c2c; background: #fff0f0; }
+.logout-dialog h2 { margin: 17px 0 8px; font-size: 23px; }
+.logout-dialog p { margin: 0 0 20px; color: #667169; font-size: 13px; line-height: 1.55; }
+.logout-actions { margin-top: 20px; display: flex; justify-content: flex-end; gap: 9px; }
+.logout-actions button { min-height: 42px; padding: 0 16px; border: 1px solid #dbe1db; border-radius: 10px; color: #344139; background: #fff; font-weight: 800; cursor: pointer; }
+.logout-actions .confirm-logout { display: inline-flex; align-items: center; gap: 8px; border-color: #9e2b2b; color: #fff; background: #9e2b2b; }
+.logout-actions button:disabled { opacity: .6; cursor: wait; }
+
 .admin-page { color: #15231a; }
 .admin-header { min-height: 76px; padding: 0 clamp(20px, 4vw, 54px); display: flex; align-items: center; justify-content: space-between; background: #173f2c; color: white; }
 .admin-header .auth-brand .brand-mark { width: 38px; height: 38px; background: #c8ff4b; color: #173f2c; }
@@ -138,6 +173,20 @@ a { color: inherit; }
   .company-grid { grid-template-columns: 1fr; }
   .driver-card { grid-template-columns: 1fr; }
   .driver-fuel-form { grid-template-columns: 1fr 1fr; }
+  .authenticated-header { min-height: 64px; padding: 10px 16px; flex-wrap: wrap; }
+  .authenticated-brand { font-size: 17px; }
+  .desktop-dashboard-back { display: none; }
+  .mobile-dashboard-back { display: block; width: 100%; margin-bottom: 5px; }
+  .mobile-dashboard-back .dashboard-button { width: 100%; justify-content: center; }
+  .authenticated-menu-button { display: grid; place-items: center; }
+  .authenticated-menu { width: 100%; flex: 0 0 100%; display: none; align-items: stretch; padding: 7px 0 5px; }
+  .authenticated-menu.open { display: grid; }
+  .authenticated-menu nav { display: grid; gap: 4px; }
+  .authenticated-menu nav > a { min-height: 44px; padding: 0 13px; }
+  .authenticated-account { margin-top: 9px; padding: 14px 0 0; justify-content: space-between; border-left: 0; border-top: 1px solid rgba(255,255,255,.15); }
+  .authenticated-account > span { max-width: 48%; }
+  .logout-button { min-height: 44px; }
+  .authenticated-breadcrumbs { width: min(100% - 28px, 1180px); margin-top: 15px; }
 }
 @media (max-width: 560px) {
   .demo-bar { align-items: flex-start; flex-wrap: wrap; line-height: 1.4; }

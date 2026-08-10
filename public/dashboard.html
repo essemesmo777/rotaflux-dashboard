@@ -76,6 +76,8 @@
       padding: 0 9px 26px;
       font: 800 20px/1 "Manrope", sans-serif;
       letter-spacing: -.5px;
+      color: white;
+      text-decoration: none;
     }
     .brand-mark {
       width: 34px; height: 34px;
@@ -528,7 +530,7 @@
 <body>
   <div class="app">
     <aside class="sidebar" id="sidebar" aria-label="Navegação principal">
-      <div class="brand"><span class="brand-mark"><i data-lucide="route"></i></span> RotaFlux</div>
+      <a class="brand" id="brandHome" href="/" target="_top" aria-label="RotaFlux — ir para a Dashboard"><span class="brand-mark"><i data-lucide="route"></i></span> RotaFlux</a>
       <div class="nav-label">Operação</div>
       <nav class="nav">
         <button class="nav-btn active" data-view="overview"><i data-lucide="layout-dashboard"></i> Visão geral</button>
@@ -561,6 +563,7 @@
     <main class="main">
       <header class="topbar">
         <button class="icon-btn mobile-menu" id="mobileMenuBtn" aria-label="Abrir menu"><i data-lucide="menu"></i></button>
+        <button class="secondary-btn hidden" id="dashboardBackBtn" type="button"><i data-lucide="arrow-left"></i> Voltar para Dashboard</button>
         <div class="page-title"><h1 id="topTitle">Visão operacional</h1><p id="currentDateLabel">Acompanhe os números da sua operação em tempo real.</p></div>
         <div class="top-actions">
           <label class="date-control"><i data-lucide="calendar-days"></i><select id="periodFilter" aria-label="Filtrar período"><option value="today">Hoje</option><option value="7d">Últimos 7 dias</option><option value="30d" selected>Últimos 30 dias</option><option value="all">Todo o período</option></select></label>
@@ -646,9 +649,10 @@
 
   <div class="modal-backdrop hidden" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle"><div class="modal small"><div class="modal-body"><span class="confirm-icon"><i data-lucide="trash-2"></i></span><h3 id="confirmTitle" style="margin:0;font:800 17px Manrope">Excluir esta rota?</h3><p style="color:var(--muted);font-size:10px;line-height:1.55">A rota será removida dos cálculos e indicadores. Essa ação não pode ser desfeita.</p></div><div class="modal-foot"><button class="secondary-btn" data-close-modal>Cancelar</button><button class="primary-btn" id="confirmDeleteBtn" style="background:var(--red);border-color:var(--red)">Excluir rota</button></div></div></div>
 
-  <div class="profile-menu hidden" id="profileMenu"><button data-profile-action="settings"><i data-lucide="settings"></i> Configurações da conta</button><button data-profile-action="dark"><i data-lucide="moon"></i> Alternar modo escuro</button><button data-profile-action="logout"><i data-lucide="log-out"></i> Sair da plataforma</button></div>
+  <div class="profile-menu hidden" id="profileMenu"><button data-profile-action="settings"><i data-lucide="settings"></i> Configurações da conta</button><button data-profile-action="dark"><i data-lucide="moon"></i> Alternar modo escuro</button><button data-profile-action="logout"><i data-lucide="log-out"></i> Sair da conta</button></div>
   <div class="toast-stack" id="toastStack" aria-live="polite"></div>
 
+  <script src="/authenticated-navigation.js"></script>
   <script>
     (() => {
       'use strict';
@@ -876,13 +880,14 @@
       function showToast(title,message,type='success'){ const el=document.createElement('div');el.className='toast '+type;el.innerHTML=`<span class="toast-icon"><i data-lucide="${type==='error'?'triangle-alert':'check'}"></i></span><div><strong>${escapeHtml(title)}</strong><span>${escapeHtml(message)}</span></div>`;document.getElementById('toastStack').appendChild(el);refreshIcons();setTimeout(()=>{el.style.opacity='0';el.style.transform='translateY(8px)';setTimeout(()=>el.remove(),220)},4200); }
 
       const titles={overview:['Visão operacional','Acompanhe os números da sua operação em tempo real.'],routes:['Gestão de rotas','Consulte as viagens, custos e resultados.'],analytics:['Análise de desempenho','Compare eficiência, margens e oportunidades.'],imports:['Importações','Envie e acompanhe suas planilhas.'],settings:['Configurações','Personalize os padrões da operação.']};
-      function switchView(view){ if(!titles[view])return;currentView=view;document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+view));document.querySelectorAll('.nav-btn[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));setText('topTitle',titles[view][0]);setText('currentDateLabel',titles[view][1]);document.getElementById('sidebar').classList.remove('open');window.scrollTo({top:0,behavior:'smooth'});if(view==='analytics')setTimeout(()=>renderCharts(filteredRoutes(),totals(filteredRoutes())),40); }
+      function switchView(view){ if(!titles[view])return;currentView=view;document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+view));document.querySelectorAll('.nav-btn[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));document.getElementById('dashboardBackBtn').classList.toggle('hidden',view==='overview');setText('topTitle',titles[view][0]);setText('currentDateLabel',titles[view][1]);document.getElementById('sidebar').classList.remove('open');window.scrollTo({top:0,behavior:'smooth'});if(view==='analytics')setTimeout(()=>renderCharts(filteredRoutes(),totals(filteredRoutes())),40); }
       function applyTheme(dark){ settings.dark=dark;document.body.classList.toggle('dark',dark);document.getElementById('darkSwitch').classList.toggle('on',dark);document.getElementById('themeBtn').innerHTML=`<i data-lucide="${dark?'sun':'moon'}"></i>`;refreshIcons();persist();setTimeout(()=>renderCharts(filteredRoutes(),totals(filteredRoutes())),50); }
       function refreshIcons(){ if(window.lucide)lucide.createIcons({attrs:{'aria-hidden':'true'}}); }
 
       function wireEvents(){
         const demoNotice=()=>showToast('Modo demo','Entre na sua conta para cadastrar, editar ou importar dados.');
         document.querySelectorAll('.nav-btn[data-view]').forEach(b=>b.onclick=()=>switchView(b.dataset.view));
+        document.getElementById('dashboardBackBtn').onclick=()=>switchView('overview');
         document.querySelectorAll('[data-open-upload]').forEach(b=>b.onclick=()=>window.top.location.href=demoMode?'/demo/operacoes?tab=imports':'/operacoes?tab=imports');
         document.querySelectorAll('[data-close-modal]').forEach(b=>b.onclick=closeModals);
         document.querySelectorAll('.modal-backdrop').forEach(m=>m.addEventListener('mousedown',e=>{if(e.target===m)closeModals()}));
@@ -904,7 +909,7 @@
         [document.getElementById('modalDropzone'),document.getElementById('pageDropzone')].forEach(zone=>{zone.onclick=()=>demoMode?demoNotice():fileInput.click();zone.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();demoMode?demoNotice():fileInput.click()}};['dragenter','dragover'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();if(!demoMode)zone.classList.add('dragging')}));['dragleave','drop'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.remove('dragging')}));zone.addEventListener('drop',e=>demoMode?demoNotice():handleFile(e.dataTransfer.files[0]));});
         document.getElementById('profileBtn').onclick=e=>{e.stopPropagation();const m=document.getElementById('profileMenu');m.classList.toggle('hidden');e.currentTarget.setAttribute('aria-expanded',String(!m.classList.contains('hidden')))};
         document.addEventListener('click',()=>document.getElementById('profileMenu').classList.add('hidden'));
-        document.querySelectorAll('[data-profile-action]').forEach(b=>b.onclick=async e=>{e.stopPropagation();const a=b.dataset.profileAction;if(a==='settings')switchView('settings');if(a==='dark')applyTheme(!settings.dark);if(a==='logout'){if(!demoMode)await fetch('/api/auth/logout',{method:'POST'}).catch(()=>undefined);window.top.location.href='/login';return;}document.getElementById('profileMenu').classList.add('hidden')});
+        document.querySelectorAll('[data-profile-action]').forEach(b=>b.onclick=async e=>{e.stopPropagation();const a=b.dataset.profileAction;if(a==='settings')switchView('settings');if(a==='dark')applyTheme(!settings.dark);if(a==='logout'){await window.RotaFluxNavigation.logout({demoMode});return;}document.getElementById('profileMenu').classList.add('hidden')});
         document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModals()});
       }
 
@@ -919,7 +924,7 @@
         document.getElementById('currentDateLabel').textContent=demoMode?'Explore indicadores calculados com dados fictícios.':'Acompanhe os números da sua operação em tempo real.';
         document.getElementById('defaultDiesel').value=settings.dieselPrice;document.getElementById('defaultEfficiency').value=settings.efficiency;document.getElementById('targetMargin').value=settings.targetMargin;
         document.getElementById('lossAlertSwitch').classList.toggle('on',settings.lossAlerts);document.getElementById('localStorageSwitch').classList.add('on');
-        if(demoMode){document.getElementById('profileName').textContent='Conta Demo';document.getElementById('profileAvatar').textContent='DM';document.getElementById('profileRole').textContent='Somente leitura';document.getElementById('welcomeTitle').textContent='Bem-vindo à demonstração.';document.querySelector('.privacy-note').innerHTML='<i data-lucide="shield-check"></i> Dados fictícios — nada é salvo';document.getElementById('operationsNav').href='/demo/operacoes';document.getElementById('importsNav').href='/demo/operacoes?tab=imports';}
+        if(demoMode){document.getElementById('brandHome').href='/demo';document.getElementById('profileName').textContent='Conta Demo';document.getElementById('profileAvatar').textContent='DM';document.getElementById('profileRole').textContent='Somente leitura';document.getElementById('welcomeTitle').textContent='Bem-vindo à demonstração.';document.querySelector('.privacy-note').innerHTML='<i data-lucide="shield-check"></i> Dados fictícios — nada é salvo';document.getElementById('operationsNav').href='/demo/operacoes';document.getElementById('importsNav').href='/demo/operacoes?tab=imports';}
         wireEvents();applyTheme(settings.dark);refreshIcons();updateDashboard();if(!demoMode){hydrateProfile();hydrateFromCloud();}
       }
       if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();

@@ -106,23 +106,14 @@ export default function DriverPage() {
     } finally { setSaving(false); }
   }
 
-  async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    window.location.replace("/login");
-  }
-
   return (
     <main className="driver-page">
-      <header className="admin-header">
-        <div className="auth-brand"><span className="brand-mark">R</span><span>RotaFlux Motorista</span></div>
-        <button onClick={logout}>Sair</button>
-      </header>
       <section className="driver-main">
         <div className="admin-title"><div><h1>Olá, {name.split(" ")[0]}</h1><p>Aqui aparecem somente as operações atribuídas a você.</p></div></div>
         {error && <div className="form-error" role="alert">{error}</div>}
         {notice && <div className="form-success" role="status">{notice}</div>}
         {selected && <section className="driver-fuel-panel" aria-label="Novo abastecimento">
-          <div className="driver-fuel-heading"><div><span>Novo abastecimento</span><h2>{selected.route}</h2><p>{selected.vehicle} · {selected.plate} · {selected.driver}</p></div><button type="button" onClick={() => setSelected(null)}>Fechar</button></div>
+          <div className="driver-fuel-heading"><div><span>Novo abastecimento</span><h2>{selected.route}</h2><p>{selected.vehicle} · {selected.plate} · {selected.driver}</p></div><button type="button" onClick={() => setSelected(null)}>← Voltar para minhas rotas</button></div>
           <form onSubmit={saveRefueling} className="driver-fuel-form">
             <label><span>Posto *</span><input value={fuel.stationName} onChange={(event) => setFuel({ ...fuel, stationName: event.target.value })} required /></label>
             <label><span>Odômetro atual (km) *</span><input inputMode="decimal" value={fuel.odometer} onChange={(event) => setFuel({ ...fuel, odometer: event.target.value })} placeholder={`${selected.startOdometer} a ${selected.endOdometer}`} required /></label>
