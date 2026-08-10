@@ -1,0 +1,29 @@
+name: Nova função
+description: Propor uma nova capacidade para o produto ou a operação
+title: "[Nova função] "
+labels:
+  - Nova função
+body:
+  - type: textarea
+    id: oportunidade
+    attributes:
+      label: Problema ou oportunidade
+      description: Explique quem precisa da função e qual resultado ela deve gerar.
+    validations:
+      required: true
+  - type: textarea
+    id: solucao
+    attributes:
+      label: Função proposta
+    validations:
+      required: true
+  - type: textarea
+    id: aceite
+    attributes:
+      label: Critérios de aceite e validação
+    validations:
+      required: true
+  - type: textarea
+    id: riscos
+    attributes:
+      label: Riscos, dependências, limitações e próximos passos

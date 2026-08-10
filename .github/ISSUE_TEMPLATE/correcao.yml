@@ -1,0 +1,36 @@
+name: Correção
+description: Registrar falha, regressão ou comportamento incorreto
+title: "[Correção] "
+labels:
+  - Correção
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Problema
+      description: Descreva o comportamento atual e seu impacto.
+    validations:
+      required: true
+  - type: textarea
+    id: reproducao
+    attributes:
+      label: Como reproduzir
+      description: Liste os passos, dados e perfil de acesso necessários.
+    validations:
+      required: true
+  - type: textarea
+    id: esperado
+    attributes:
+      label: Comportamento esperado
+    validations:
+      required: true
+  - type: textarea
+    id: aceite
+    attributes:
+      label: Critérios de aceite e validação
+    validations:
+      required: true
+  - type: textarea
+    id: riscos
+    attributes:
+      label: Riscos e observações

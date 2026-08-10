@@ -1,0 +1,29 @@
+name: Melhoria
+description: Aprimorar uma funcionalidade, experiência ou processo existente
+title: "[Melhoria] "
+labels:
+  - Melhoria
+body:
+  - type: textarea
+    id: contexto
+    attributes:
+      label: Contexto atual
+      description: Explique como funciona hoje e o que precisa melhorar.
+    validations:
+      required: true
+  - type: textarea
+    id: proposta
+    attributes:
+      label: Melhoria proposta
+    validations:
+      required: true
+  - type: textarea
+    id: aceite
+    attributes:
+      label: Critérios de aceite e validação
+    validations:
+      required: true
+  - type: textarea
+    id: riscos
+    attributes:
+      label: Riscos, limitações e próximos passos
