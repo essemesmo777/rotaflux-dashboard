@@ -59,7 +59,7 @@ export default function LoginPage() {
               </div>
             </div>
             <a className="form-link" href="/forgot-password">Esqueci minha senha</a>
-            <button className="primary-action" disabled={loading}>{loading ? "Entrando…" : "Entrar na plataforma"}</button>
+            <button className="primary-action" disabled={loading} aria-busy={loading}>{loading ? <span className="button-progress"><span className="button-spinner" aria-hidden="true" />Entrando…</span> : "Entrar na plataforma"}</button>
           </form>
           <div className="auth-divider"><span>ou explore antes de entrar</span></div>
           <a className="demo-action" href="/demo">

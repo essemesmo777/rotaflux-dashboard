@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { calculateRefuelingValues, type RefuelingValueField } from "../../lib/refueling-calculator";
+import MotionPresence from "../../components/motion-presence";
 
 type Operation = {
   id: string;
@@ -29,6 +30,16 @@ const emptyFuel = (date = ""): FuelForm => ({
   fillType: "FULL", amountPaid: "", pricePerLiter: "", liters: "", notes: "", editedFields: [],
 });
 
+function DriverListSkeleton() {
+  return <div className="driver-list-skeleton" role="status" aria-label="Carregando rotas">
+    {Array.from({ length: 3 }, (_, index) => <div className="driver-card driver-card-skeleton" key={index} aria-hidden="true">
+      <div><span className="skeleton-line short" /><span className="skeleton-line skeleton-title" /><span className="skeleton-line" /></div>
+      <div className="driver-skeleton-details"><span className="skeleton-line" /><span className="skeleton-line short" /><span className="skeleton-line" /><span className="skeleton-line short" /></div>
+      <span className="skeleton-line skeleton-button" />
+    </div>)}
+  </div>;
+}
+
 async function api(url: string, options?: RequestInit) {
   const response = await fetch(url, options);
   const payload = await response.json().catch(() => ({}));
@@ -44,6 +55,7 @@ export default function DriverPage() {
   const [receipt, setReceipt] = useState<File | null>(null);
   const [pump, setPump] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -54,14 +66,15 @@ export default function DriverPage() {
     ]).then(([session, data]) => {
       setName(session.profile?.name || "Motorista");
       setOperations(data.operations || []);
-    }).catch((cause) => setError(cause instanceof Error ? cause.message : "Não foi possível carregar suas rotas."));
+    }).catch((cause) => setError(cause instanceof Error ? cause.message : "Não foi possível carregar suas rotas."))
+      .finally(() => setLoading(false));
   }, []);
 
   function openRefueling(operation: Operation) {
     setSelected(operation);
     setFuel(emptyFuel(operation.date));
     setReceipt(null); setPump(null); setError(""); setNotice("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }
 
   function editFuelField(field: RefuelingValueField, value: string) {
@@ -112,6 +125,7 @@ export default function DriverPage() {
         <div className="admin-title"><div><h1>Olá, {name.split(" ")[0]}</h1><p>Aqui aparecem somente as operações atribuídas a você.</p></div></div>
         {error && <div className="form-error" role="alert">{error}</div>}
         {notice && <div className="form-success" role="status">{notice}</div>}
+        <MotionPresence open={Boolean(selected)}>
         {selected && <section className="driver-fuel-panel" aria-label="Novo abastecimento">
           <div className="driver-fuel-heading"><div><span>Novo abastecimento</span><h2>{selected.route}</h2><p>{selected.vehicle} · {selected.plate} · {selected.driver}</p></div><button type="button" onClick={() => setSelected(null)}>← Voltar para minhas rotas</button></div>
           <form onSubmit={saveRefueling} className="driver-fuel-form">
@@ -128,11 +142,12 @@ export default function DriverPage() {
             <label><span>Foto do comprovante</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setReceipt(event.target.files?.[0] || null)} /></label>
             <label><span>Foto da bomba</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setPump(event.target.files?.[0] || null)} /></label>
             <label className="wide"><span>Observações</span><textarea value={fuel.notes} onChange={(event) => setFuel({ ...fuel, notes: event.target.value })} /></label>
-            <button className="primary-action wide" disabled={saving}>{saving ? "Salvando…" : "Salvar abastecimento"}</button>
+            <button className="primary-action wide" disabled={saving} aria-busy={saving}>{saving ? <span className="button-progress"><span className="button-spinner" aria-hidden="true" />Salvando…</span> : "Salvar abastecimento"}</button>
           </form>
         </section>}
-        <div className="driver-list">
-          {operations.length === 0 && !error ? <div className="admin-empty">Nenhuma rota atribuída no momento.</div> : operations.map((operation) => (
+        </MotionPresence>
+        <div className="driver-list" aria-busy={loading}>
+          {loading ? <DriverListSkeleton /> : operations.length === 0 && !error ? <div className="admin-empty">Nenhuma rota atribuída no momento.</div> : operations.map((operation) => (
             <article className="driver-card" key={operation.id}>
               <div><span>{new Date(`${operation.date}T12:00:00`).toLocaleDateString("pt-BR")}</span><h2>{operation.route}</h2><p>{operation.vehicle} · {operation.plate}</p></div>
               <dl><div><dt>Odômetros</dt><dd>{operation.startOdometer} → {operation.endOdometer} km</dd></div><div><dt>Distância</dt><dd>{operation.km} km</dd></div><div><dt>Jornada</dt><dd>{operation.departureTime || "—"} → {operation.arrivalTime || "—"}</dd></div><div><dt>Status</dt><dd>{operation.operationalStatus}</dd></div></dl>

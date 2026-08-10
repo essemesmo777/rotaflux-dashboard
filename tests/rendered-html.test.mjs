@@ -41,7 +41,7 @@ test("server-enforces private RotaFlux routes and renders public access pages", 
 });
 
 test("keeps documents and calculated daily trips in isolated Supabase storage", async () => {
-  const [hosting, dashboard, operations, operationsRoute, importsRoute, ocrRoute, mappingRoute, parser, migration, operationsMigration, mappingMigration, refuelingsMigration, tenantMigration, fuelDriverMigration, driversUi, driverPage, home, auth] = await Promise.all([
+  const [hosting, dashboard, operations, operationsRoute, importsRoute, ocrRoute, mappingRoute, parser, migration, operationsMigration, mappingMigration, refuelingsMigration, tenantMigration, fuelDriverMigration, driversUi, driverPage, home, auth, motionStyles, lazyFrame] = await Promise.all([
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../public/dashboard.html", import.meta.url), "utf8"),
     readFile(new URL("../public/operations.html", import.meta.url), "utf8"),
@@ -60,6 +60,8 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
     readFile(new URL("../app/motorista/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/supabase-rest.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../components/lazy-frame.tsx", import.meta.url), "utf8"),
   ]);
 
   assert.match(hosting, /"project_id"/);
@@ -72,7 +74,12 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
   assert.match(importsRoute, /storage\/v1\/object\/route-imports/);
   assert.match(importsRoute, /organization_id/);
   assert.match(auth, /HttpOnly/);
-  assert.match(home, /src="\/dashboard\.html"/);
+  assert.match(home, /LazyFrame source="\/dashboard\.html"/);
+  assert.match(lazyFrame, /frame-skeleton/);
+  assert.match(lazyFrame, /onLoad/);
+  assert.match(motionStyles, /prefers-reduced-motion: reduce/);
+  assert.match(motionStyles, /skeleton-shimmer/);
+  assert.match(motionStyles, /motion-backdrop/);
   assert.match(dashboard, /const demoMode/);
   assert.match(dashboard, /Esta ação está desativada no modo demo/);
   assert.match(dashboard, /endOdometer-startOdometer/);
@@ -80,11 +87,20 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
   assert.match(dashboard, /\/api\/imports/);
   assert.match(dashboard, /id="operationsNav"/);
   assert.match(dashboard, /Preenchimento prioritário/);
+  assert.match(dashboard, /loadScriptOnce/);
+  assert.match(dashboard, /dataset\.lazyLibrary/);
+  assert.match(dashboard, /prefers-reduced-motion: reduce/);
+  assert.doesNotMatch(dashboard, /<script[^>]+src="[^"]*(?:xlsx|chart\.umd)[^"]*"[^>]*><\/script>/i);
   assert.match(dashboard, /id="routeStartOdometer"[^>]*required/);
   assert.match(dashboard, /id="routeEndOdometer"[^>]*required/);
   assert.doesNotMatch(dashboard, /id="routeLiters"[^>]*required/);
   assert.doesNotMatch(dashboard, /id="routeVehicle"[^>]*required/);
   assert.match(operations, /Tirar foto/);
+  assert.match(operations, /table-skeleton/);
+  assert.match(operations, /loadLibrary/);
+  assert.match(operations, /dataset\.lazyLibrary/);
+  assert.match(operations, /prefers-reduced-motion:reduce/);
+  assert.doesNotMatch(operations, /<script[^>]+src="[^"]*(?:xlsx|pdf\.min|tesseract)[^"]*"[^>]*><\/script>/i);
   assert.match(operations, /revise e confirme/i);
   assert.match(operations, /pdf\.js/);
   assert.match(operations, /Tesseract\.createWorker/);

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
+import MotionBackdrop from "./motion-backdrop";
 import {
   homePathForRole,
   navigationItemsForRole,
@@ -55,7 +56,7 @@ export function LogoutButton() {
 
   return <>
     <button className="logout-button" type="button" onClick={() => setConfirming(true)}><LogoutIcon />Sair da conta</button>
-    {confirming && <div className="logout-backdrop" role="presentation">
+    <MotionBackdrop open={confirming} className="logout-backdrop" onDismiss={() => { if (!loading) { setConfirming(false); setError(""); } }}>
       <section className="logout-dialog" role="dialog" aria-modal="true" aria-labelledby="logout-title">
         <span className="logout-dialog-icon"><LogoutIcon /></span>
         <h2 id="logout-title">Deseja realmente sair?</h2>
@@ -63,10 +64,10 @@ export function LogoutButton() {
         {error && <div className="form-error" role="alert">{error}</div>}
         <div className="logout-actions">
           <button type="button" onClick={() => { setConfirming(false); setError(""); }} disabled={loading}>Cancelar</button>
-          <button className="confirm-logout" type="button" onClick={logout} disabled={loading}><LogoutIcon />{loading ? "Saindo…" : "Sair"}</button>
+          <button className="confirm-logout" type="button" onClick={logout} disabled={loading} aria-busy={loading}>{loading ? <span className="button-progress"><span className="button-spinner" aria-hidden="true" />Saindo…</span> : <><LogoutIcon />Sair</>}</button>
         </div>
       </section>
-    </div>}
+    </MotionBackdrop>
   </>;
 }
 
