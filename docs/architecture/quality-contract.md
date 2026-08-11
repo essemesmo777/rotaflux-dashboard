@@ -1,6 +1,6 @@
 # Contrato de qualidade e arquitetura
 
-Este documento define a barreira mínima para uma alteração chegar à `main`. O objetivo é reduzir regressões sem transformar o RotaFlux em uma arquitetura maior que o produto.
+Este documento define a barreira mínima para uma alteração chegar à `main`. O objetivo é reduzir regressões sem transformar o OperBase em uma arquitetura maior que o produto.
 
 ## Fronteiras
 

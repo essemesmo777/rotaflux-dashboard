@@ -41,7 +41,7 @@ export default function LoginPage() {
       <AuthVisual />
       <section className="auth-panel">
         <div className="auth-card">
-          <div className="auth-brand mobile-brand"><span className="brand-mark">R</span><span>RotaFlux</span></div>
+          <div className="auth-brand mobile-brand"><span className="brand-mark">O</span><span>OperBase</span></div>
           <span className="brand-mark">R</span>
           <h2>Bem-vindo de volta</h2>
           <p>Acesse sua operação com o e-mail cadastrado pelo administrador.</p>
@@ -75,8 +75,8 @@ export default function LoginPage() {
 
 function AuthVisual() {
   return (
-    <section className="auth-visual" aria-label="RotaFlux">
-      <div className="auth-brand"><span className="brand-mark">R</span><span>RotaFlux</span></div>
+    <section className="auth-visual" aria-label="OperBase">
+      <div className="auth-brand"><span className="brand-mark">O</span><span>OperBase</span></div>
       <div className="auth-copy">
         <span className="eyebrow">Gestão operacional inteligente</span>
         <h1>Rotas que dão resultado.</h1>

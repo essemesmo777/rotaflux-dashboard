@@ -7,14 +7,14 @@ test("login exposes a working read-only demo path", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/demo$/);
   await expect(page.getByText("Modo demo", { exact: true })).toBeVisible();
-  const dashboard = page.frameLocator('iframe[title="Demonstração do painel RotaFlux"]');
-  await expect(dashboard.locator("body")).toContainText("RotaFlux");
+  const dashboard = page.frameLocator('iframe[title="Demonstração do painel OperBase"]');
+  await expect(dashboard.locator("body")).toContainText("OperBase");
 });
 
 test("demo operations load without an authenticated session", async ({ page }) => {
   await page.goto("/demo/operacoes");
   await expect(page.getByText("Modo demo", { exact: true })).toBeVisible();
-  const operations = page.frameLocator('iframe[title="Demonstração das operações RotaFlux"]');
+  const operations = page.frameLocator('iframe[title="Demonstração das operações OperBase"]');
   await expect(operations.locator("body")).toContainText(/Opera[cç][aã]o|Rotas|Abastecimentos/i);
 });
 

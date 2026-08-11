@@ -1,4 +1,4 @@
-# Contexto operacional do RotaFlux
+# Contexto operacional do OperBase
 
 > Documento obrigatório para qualquer pessoa ou agente que trabalhe neste repositório. Leia-o antes de analisar, implementar, corrigir, mesclar ou publicar mudanças.
 
@@ -74,6 +74,15 @@ Termos de Uso e Política de Privacidade só podem ser marcados como aprovados q
 - Commit de produção confirmado: `1585ff2f660578f7b2cdd095ab0a5dcb2b66cf21`.
 
 Antes de publicar, consultar o estado atual do GitHub e do Sites; os números acima são contexto histórico e podem ter avançado.
+
+## Identidade e domínio operacional
+
+- O nome visível do produto é **OperBase**.
+- Identificadores técnicos legados (`rotaflux_access`, `rotaflux_refresh`, `RotaFluxNavigation`, URL, repositório e nomes históricos de migrations/buckets) devem permanecer estáveis até existir uma migration específica, para não quebrar sessões, uploads e integrações.
+- `routes` é a fonte canônica das operações e `route_refuelings` é a fonte canônica dos abastecimentos; não criar tabelas duplicadas para esses fatos.
+- O módulo `Resultado Operacional` reutiliza essas fontes e complementa apenas contratos, contratantes, manutenções, despesas e snapshots de fechamento.
+- Dados financeiros são exclusivos de `COMPANY_ADMIN` e `SUPER_ADMIN`. Motoristas não podem listar contratos, custos, fechamentos ou indicadores financeiros.
+- Todo cálculo financeiro deve ocorrer e ser validado no servidor, sempre limitado ao `organization_id` da sessão; nunca confiar em uma empresa informada arbitrariamente pelo frontend.
 
 ## Publicação no Sites
 

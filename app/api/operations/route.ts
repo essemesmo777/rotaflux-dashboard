@@ -129,13 +129,20 @@ async function resolveDriver(
   return driver;
 }
 
+async function listContracts(token: string, organizationId: string, role: string) {
+  if (!['SUPER_ADMIN', 'COMPANY_ADMIN'].includes(role)) return [];
+  const response = await supabaseFetch(`/rest/v1/contracts?organization_id=eq.${encodeURIComponent(organizationId)}&status=eq.ACTIVE&select=id,name,code,line_name&order=name`, { token });
+  return response.ok ? await response.json() : [];
+}
+
 export async function GET(request: Request) {
   const session = await requireSession(request);
   if (!session) return Response.json({ error: "Sessão expirada." }, { status: 401 });
   try {
-    const [response, refuelings] = await Promise.all([
+    const [response, refuelings, contracts] = await Promise.all([
       supabaseFetch("/rest/v1/routes?select=*&order=date.desc,created_at.desc&limit=5000", { token: session.token }),
       refuelingsForRoute(session.token),
+      listContracts(session.token, session.profile.organization_id, session.profile.role),
     ]);
     if (!response.ok) {
       return Response.json({ error: await responseError(response, "Não foi possível carregar as operações.") }, { status: 500 });
@@ -147,6 +154,7 @@ export async function GET(request: Request) {
     return Response.json({
       operations: withRefuelings(rows, refuelings),
       drivers,
+      contracts,
       permissions: {
         canCreate: true,
         canManageAll: ["SUPER_ADMIN", "COMPANY_ADMIN"].includes(session.profile.role),
