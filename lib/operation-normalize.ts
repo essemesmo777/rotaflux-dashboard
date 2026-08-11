@@ -131,6 +131,7 @@ export function normalizeOperation(
   const driver = required(input.driver, "O motorista");
   const driverId = text(input.driverId ?? input.driver_id) || null;
   const driverUserId = text(input.driverUserId ?? input.driver_user_id) || null;
+  const contractId = text(input.contractId ?? input.contract_id) || null;
   const startOdometer = optionalNumber(input.startOdometer ?? input.kmInitial);
   const endOdometer = optionalNumber(input.endOdometer ?? input.kmFinal);
 
@@ -180,6 +181,7 @@ export function normalizeOperation(
     driver,
     driverId,
     driverUserId,
+    contractId,
     supervisor: text(input.supervisor),
     departureTime,
     arrivalTime,
@@ -227,6 +229,7 @@ export function operationToDatabase(record: NormalizedOperation, organizationId:
     driver: record.driver,
     driver_id: record.driverId,
     driver_user_id: record.driverUserId,
+    contract_id: record.contractId,
     supervisor: record.supervisor || null,
     origin: record.origin,
     destination: record.destination,
@@ -323,6 +326,7 @@ export function operationToClient(row: DbOperation, refuelingRows: DbRefueling[]
     driver: row.driver,
     driverId: row.driver_id ?? null,
     driverUserId: row.driver_user_id ?? null,
+    contractId: row.contract_id ?? null,
     supervisor: row.supervisor ?? "",
     departureTime: typeof row.start_time === "string" ? row.start_time.slice(0, 5) : null,
     arrivalTime: typeof row.end_time === "string" ? row.end_time.slice(0, 5) : null,

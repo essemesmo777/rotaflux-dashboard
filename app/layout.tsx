@@ -9,14 +9,14 @@ export async function generateMetadata(): Promise<Metadata> {
   const origin = `${protocol}://${host}`;
 
   return {
-    title: "RotaFlux — Gestão de Rotas",
+    title: "OperBase — Gestão Operacional",
     description: "Custos, diesel e lucro sob controle.",
     icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
     openGraph: {
       title: "Rotas que dão resultado.",
       description: "Custos, diesel e lucro sob controle.",
       type: "website",
-      images: [{ url: `${origin}/og.png`, width: 1200, height: 630, alt: "RotaFlux — Rotas que dão resultado" }],
+      images: [{ url: `${origin}/og.png`, width: 1200, height: 630, alt: "OperBase — Operações que dão resultado" }],
     },
     twitter: {
       card: "summary_large_image",

@@ -8,7 +8,7 @@ export default function DemoPage() {
         <span>Você está explorando dados fictícios em um ambiente somente para visualização.</span>
         <a href="/login">Entrar na minha conta</a>
       </div>
-      <LazyFrame source="/dashboard.html?demo=1" title="Demonstração do painel RotaFlux" />
+      <LazyFrame source="/dashboard.html?demo=1" title="Demonstração do painel OperBase" />
     </main>
   );
 }

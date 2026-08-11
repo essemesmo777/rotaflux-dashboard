@@ -5,7 +5,7 @@ export default async function Home() {
   await requirePageSession(["COMPANY_ADMIN"]);
   return (
     <main className="site-shell">
-      <LazyFrame source="/dashboard.html" title="Dashboard RotaFlux" />
+      <LazyFrame source="/dashboard.html" title="Dashboard OperBase" />
     </main>
   );
 }

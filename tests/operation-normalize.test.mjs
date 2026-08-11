@@ -63,6 +63,14 @@ test("keeps fuel values absent when no refueling was reported", () => {
   assert.equal(row.refueled, false);
 });
 
+test("preserves the optional financial contract in database and client mappings", () => {
+  const contractId = crypto.randomUUID();
+  const operation = normalizeOperation({ ...complete, contractId });
+  const row = operationToDatabase(operation, crypto.randomUUID(), crypto.randomUUID());
+  assert.equal(row.contract_id, contractId);
+  assert.equal(operationToClient({ ...row, created_at: new Date().toISOString() }).contractId, contractId);
+});
+
 test("supports multiple stations and derives the paid total and weighted price", () => {
   const operation = normalizeOperation({
     ...complete,

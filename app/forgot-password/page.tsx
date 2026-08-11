@@ -30,13 +30,13 @@ export default function ForgotPasswordPage() {
   return (
     <main className="auth-page">
       <section className="auth-visual" aria-label="Recuperação de acesso">
-        <div className="auth-brand"><span className="brand-mark">R</span><span>RotaFlux</span></div>
+        <div className="auth-brand"><span className="brand-mark">O</span><span>OperBase</span></div>
         <div className="auth-copy"><span className="eyebrow">Acesso seguro</span><h1>Volte para a sua operação.</h1><p>Enviaremos um link temporário para redefinir sua senha com segurança.</p></div>
         <div className="auth-stats"><span><strong>Seguro</strong>link de uso temporário</span></div>
       </section>
       <section className="auth-panel">
         <div className="auth-card">
-          <div className="auth-brand mobile-brand"><span className="brand-mark">R</span><span>RotaFlux</span></div>
+          <div className="auth-brand mobile-brand"><span className="brand-mark">O</span><span>OperBase</span></div>
           <span className="brand-mark">R</span>
           <h2>Recuperar senha</h2>
           <p>Informe o e-mail cadastrado. Se ele existir, você receberá as instruções.</p>

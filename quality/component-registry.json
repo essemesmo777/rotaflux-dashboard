@@ -19,6 +19,10 @@
     {
       "path": "components/motion-presence.tsx",
       "purpose": "Presença animada reutilizável para conteúdo condicional"
+    },
+    {
+      "path": "components/operational-results-dashboard.tsx",
+      "purpose": "Resultado operacional, contratos, custos, fechamentos e exportação em Excel"
     }
   ]
 }

@@ -35,3 +35,9 @@ test("keeps value received optional and stores a blank value as zero", () => {
   assert.equal(normalizeRoute({ ...prioritized, revenue: 1380 }).revenue, 1380);
   assert.throws(() => normalizeRoute({ ...prioritized, revenue: -1 }), /não pode ser negativo/i);
 });
+
+test("keeps a contract association optional", () => {
+  const contractId = crypto.randomUUID();
+  assert.equal(normalizeRoute({ ...prioritized, contractId }).contractId, contractId);
+  assert.equal(normalizeRoute(prioritized).contractId, null);
+});

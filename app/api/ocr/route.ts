@@ -106,7 +106,7 @@ function responseMessage(diagnostics: ExtractionDiagnostics) {
     return "Conseguimos ler o documento, mas não identificamos sua estrutura. Você pode revisar os dados encontrados.";
   }
   if (diagnostics.code === "HEADERS_UNMAPPED") {
-    return "Encontramos uma tabela. Confirme quais colunas correspondem aos campos do RotaFlux.";
+    return "Encontramos uma tabela. Confirme quais colunas correspondem aos campos do OperBase.";
   }
   if (diagnostics.code === "VALIDATION_REJECTED") {
     return "Encontramos registros parciais, mas eles precisam de revisão antes da importação.";

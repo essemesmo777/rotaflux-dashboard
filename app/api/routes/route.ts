@@ -21,6 +21,7 @@ function toClient(row: DbRoute) {
     driver: row.driver,
     driverId: row.driver_id ?? null,
     driverUserId: row.driver_user_id ?? null,
+    contractId: row.contract_id ?? null,
     origin: row.origin ?? "",
     destination: row.destination ?? "",
     startOdometer: row.start_odometer === null ? null : Number(row.start_odometer),
@@ -53,6 +54,7 @@ function toDatabase(record: ReturnType<typeof normalizeRoute>, organizationId: s
     driver: record.driver,
     driver_id: record.driverId,
     driver_user_id: record.driverUserId,
+    contract_id: record.contractId,
     origin: record.origin,
     destination: record.destination,
     start_odometer: record.startOdometer,
@@ -99,7 +101,11 @@ export async function GET(request: Request) {
   const drivers = session.profile.role === "COMPANY_ADMIN"
     ? await listAssignableDrivers(session.token, session.profile.organization_id)
     : [];
-  return Response.json({ routes: ((await response.json()) as DbRoute[]).map(toClient), drivers });
+  const contractResponse = ["SUPER_ADMIN", "COMPANY_ADMIN"].includes(session.profile.role)
+    ? await supabaseFetch(`/rest/v1/contracts?organization_id=eq.${encodeURIComponent(session.profile.organization_id)}&status=eq.ACTIVE&select=id,name,code,line_name&order=name`, { token: session.token })
+    : null;
+  const contracts = contractResponse?.ok ? await contractResponse.json() : [];
+  return Response.json({ routes: ((await response.json()) as DbRoute[]).map(toClient), drivers, contracts });
 }
 
 export async function POST(request: Request) {

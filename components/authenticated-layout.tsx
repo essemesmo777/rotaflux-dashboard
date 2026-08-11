@@ -91,8 +91,8 @@ export default function AuthenticatedLayout({
 
   return <div className="authenticated-layout">
     <header className="authenticated-header">
-      <Link className="authenticated-brand" href={home} aria-label="RotaFlux — ir para a Dashboard">
-        <span className="brand-mark">R</span><span>RotaFlux</span>
+      <Link className="authenticated-brand" href={home} aria-label="OperBase — ir para a Dashboard">
+        <span className="brand-mark">O</span><span>OperBase</span>
       </Link>
       {showDashboardBack && <div className="desktop-dashboard-back"><DashboardButton role={userRole} /></div>}
       <button className="authenticated-menu-button" type="button" aria-expanded={menuOpen} aria-controls="authenticated-menu" onClick={() => setMenuOpen((open) => !open)}>

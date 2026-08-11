@@ -14,7 +14,7 @@ async function render(pathname = "/") {
   );
 }
 
-test("server-enforces private RotaFlux routes and renders public access pages", async () => {
+test("server-enforces private OperBase routes and renders public access pages", async () => {
   const response = await render();
   assert.equal(response.status, 307);
   assert.equal(new URL(response.headers.get("location"), "http://localhost").pathname, "/login");
@@ -160,4 +160,29 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
   assert.match(driversUi, /Cadastrar motorista/);
   assert.match(driverPage, /Lançar abastecimento/);
   assert.match(driverPage, /calculateRefuelingValues/);
+});
+
+test("protects and integrates the operational result module", async () => {
+  const [migration, page, dashboard, resultApi, recordsApi, closingsApi] = await Promise.all([
+    readFile(new URL("../supabase/migrations/20260811224404_operational_results_foundation.sql", import.meta.url), "utf8"),
+    readFile(new URL("../app/resultado-operacional/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/operational-results-dashboard.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/operational-results/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/operational-records/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/operational-closings/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /SUPER_ADMIN/);
+  assert.match(page, /COMPANY_ADMIN/);
+  assert.match(migration, /create table public\.contracts/);
+  assert.match(migration, /create table public\.maintenance_records/);
+  assert.match(migration, /create table public\.operational_expenses/);
+  assert.match(migration, /create table public\.operational_closings/);
+  assert.match(migration, /force row level security/g);
+  assert.match(migration, /routes_contract_same_organization_fk/);
+  assert.match(migration, /Somente administradores podem associar contratos financeiros/);
+  assert.match(resultApi, /canManageCompany/);
+  assert.match(recordsApi, /organization_id: auth\.session\.profile\.organization_id/);
+  assert.match(closingsApi, /snapshot/);
+  assert.match(dashboard, /OperBase_resultado_/);
+  for (const sheet of ["Resumo", "Receitas", "Combustivel", "Manutencao", "Despesas", "Veiculos", "Contratos"]) assert.match(dashboard, new RegExp(`add\\("${sheet}"`));
 });

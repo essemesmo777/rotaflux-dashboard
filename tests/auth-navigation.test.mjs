@@ -15,6 +15,8 @@ test("maps each authenticated role to its own dashboard", () => {
   assert.equal(homePathForRole("DRIVER"), "/motorista");
   assert.deepEqual(navigationItemsForRole("DRIVER"), [{ href: "/motorista", label: "Minhas rotas" }]);
   assert.ok(navigationItemsForRole("COMPANY_ADMIN").some((item) => item.href === "/operacoes"));
+  assert.ok(navigationItemsForRole("COMPANY_ADMIN").some((item) => item.href === "/resultado-operacional"));
+  assert.ok(navigationItemsForRole("SUPER_ADMIN").some((item) => item.href === "/resultado-operacional"));
 });
 
 test("keeps dashboard, logo, breadcrumbs and cancel separate from logout", async () => {
@@ -27,7 +29,7 @@ test("keeps dashboard, logo, breadcrumbs and cancel separate from logout", async
     read("../public/authenticated-navigation.js"),
   ]);
 
-  assert.match(layout, /RotaFlux — ir para a Dashboard/);
+  assert.match(layout, /OperBase — ir para a Dashboard/);
   assert.match(layout, /Voltar para Dashboard/);
   assert.match(layout, /Navegação estrutural/);
   assert.match(layout, /Sair da conta/);
@@ -78,7 +80,7 @@ test("protects routes without logging out an authenticated user with another rol
   assert.match(refreshRoute, /safeReturnTo/);
 });
 
-test("real logout revokes the Supabase session and clears only RotaFlux auth cookies", async () => {
+test("real logout revokes the Supabase session and clears only legacy OperBase auth cookies", async () => {
   const route = await read("../app/api/auth/logout/route.ts");
   assert.match(route, /supabaseFetch\("\/auth\/v1\/logout"/);
   assert.match(route, /appendClearedSessionCookies/);

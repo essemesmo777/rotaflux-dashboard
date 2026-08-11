@@ -35,6 +35,7 @@ export function normalizeRoute(input: RouteInput, options?: { id?: string; impor
   const driver = String(input.driver ?? "").trim();
   const driverId = String(input.driverId ?? input.driver_id ?? "").trim() || null;
   const driverUserId = String(input.driverUserId ?? input.driver_user_id ?? "").trim() || null;
+  const contractId = String(input.contractId ?? input.contract_id ?? "").trim() || null;
   const liters = optionalNumeric(input.liters);
   const revenueInput = optionalNumeric(input.revenue);
   const startTime = time(input.startTime);
@@ -59,6 +60,7 @@ export function normalizeRoute(input: RouteInput, options?: { id?: string; impor
     driver,
     driverId,
     driverUserId,
+    contractId,
     origin: String(input.origin || "").trim(),
     destination: String(input.destination || "").trim(),
     startOdometer,
