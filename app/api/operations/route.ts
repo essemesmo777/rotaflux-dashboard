@@ -44,6 +44,7 @@ async function replaceRefuelings(
   createdBy: string,
 ) {
   const current = await refuelingsForRoute(token, record.id);
+  const currentIds = new Set(current.map((item) => String(item.id)));
   const retained = new Set(record.refuelings.map((item) => item.id));
   const removed = current.map((item) => String(item.id)).filter((id) => !retained.has(id));
   if (removed.length) {
@@ -55,16 +56,40 @@ async function replaceRefuelings(
   }
   if (!record.refuelings.length) return [];
 
-  const response = await supabaseFetch("/rest/v1/route_refuelings?on_conflict=id", {
-    method: "POST",
-    token,
-    headers: { "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=representation" },
-    body: JSON.stringify(record.refuelings.map((item) =>
-      refuelingToDatabase(item, record.id, organizationId, record.driverId, createdBy)
-    )),
-  });
-  if (!response.ok) throw new Error(await responseError(response, "Não foi possível salvar os abastecimentos."));
-  return (await response.json()) as DbRefueling[];
+  const existing = record.refuelings.filter((item) => currentIds.has(item.id));
+  const added = record.refuelings.filter((item) => !currentIds.has(item.id));
+
+  // Keep the Data API on the column-level UPDATE grants defined by the hardening
+  // migration. A table-wide upsert would also require access to immutable tenant
+  // identity columns and PostgreSQL rejects it before RLS can evaluate the rows.
+  for (const item of existing) {
+    const mutable = refuelingToDatabase(item, record.id, organizationId, record.driverId, createdBy);
+    delete (mutable as Partial<typeof mutable>).id;
+    delete (mutable as Partial<typeof mutable>).organization_id;
+    delete (mutable as Partial<typeof mutable>).route_id;
+    delete (mutable as Partial<typeof mutable>).created_by;
+    const update = await supabaseFetch(`/rest/v1/route_refuelings?id=eq.${encodeURIComponent(item.id)}`, {
+      method: "PATCH",
+      token,
+      headers: { "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify(mutable),
+    });
+    if (!update.ok) throw new Error(await responseError(update, "Não foi possível atualizar os abastecimentos."));
+  }
+
+  if (added.length) {
+    const insertion = await supabaseFetch("/rest/v1/route_refuelings", {
+      method: "POST",
+      token,
+      headers: { "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify(added.map((item) =>
+        refuelingToDatabase(item, record.id, organizationId, record.driverId, createdBy)
+      )),
+    });
+    if (!insertion.ok) throw new Error(await responseError(insertion, "Não foi possível salvar os abastecimentos."));
+  }
+
+  return refuelingsForRoute(token, record.id);
 }
 
 async function rowsForDate(token: string, date: string) {

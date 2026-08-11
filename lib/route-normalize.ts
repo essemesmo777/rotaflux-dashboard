@@ -36,7 +36,7 @@ export function normalizeRoute(input: RouteInput, options?: { id?: string; impor
   const driverId = String(input.driverId ?? input.driver_id ?? "").trim() || null;
   const driverUserId = String(input.driverUserId ?? input.driver_user_id ?? "").trim() || null;
   const liters = optionalNumeric(input.liters);
-  const revenue = optionalNumeric(input.revenue);
+  const revenueInput = optionalNumeric(input.revenue);
   const startTime = time(input.startTime);
   const endTime = time(input.endTime);
 
@@ -46,8 +46,9 @@ export function normalizeRoute(input: RouteInput, options?: { id?: string; impor
   if (startOdometer === null || endOdometer === null) throw new Error("Os odômetros de saída e chegada são obrigatórios.");
   if (endOdometer <= startOdometer) throw new Error("O odômetro de chegada deve ser maior que o de saída.");
   if (liters !== null && liters < 0) throw new Error("Os litros consumidos não podem ser negativos.");
-  if (revenue === null || revenue < 0) throw new Error("O valor recebido é obrigatório.");
+  if (revenueInput !== null && revenueInput < 0) throw new Error("O valor recebido não pode ser negativo.");
   const km = endOdometer - startOdometer;
+  const revenue = revenueInput ?? 0;
 
   return {
     id: options?.id ?? String(input.id || crypto.randomUUID()),
