@@ -8,6 +8,13 @@
       "when": 1786195029614,
       "tag": "0000_high_crystal",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1786404446144,
+      "tag": "0001_chilly_randall",
+      "breakpoints": true
     }
   ]
 }

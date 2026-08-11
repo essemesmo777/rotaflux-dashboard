@@ -284,7 +284,7 @@ export function refuelingToDatabase(
   };
 }
 
-export function refuelingToClient(row: DbRefueling) {
+function refuelingToClient(row: DbRefueling) {
   return {
     id: row.id,
     stationName: row.station_name ?? "",

@@ -19,15 +19,11 @@ function LogoutIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M15 3h5a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1h-5"/></svg>;
 }
 
-export function DashboardButton({ role, label = "Voltar para Dashboard" }: { role: AppRole; label?: string }) {
+function DashboardButton({ role, label = "Voltar para Dashboard" }: { role: AppRole; label?: string }) {
   return <Link className="dashboard-button" href={homePathForRole(role)}><span aria-hidden="true">←</span>{label}</Link>;
 }
 
-export function BackButton({ href, label }: { href: string; label: string }) {
-  return <Link className="dashboard-button" href={href}><span aria-hidden="true">←</span>{label}</Link>;
-}
-
-export function Breadcrumbs({ items }: { items: Breadcrumb[] }) {
+function Breadcrumbs({ items }: { items: Breadcrumb[] }) {
   return <nav className="authenticated-breadcrumbs" aria-label="Navegação estrutural">
     {items.map((item, index) => <span key={`${item.label}-${index}`}>
       {index > 0 && <span className="breadcrumb-separator" aria-hidden="true">›</span>}
@@ -36,7 +32,7 @@ export function Breadcrumbs({ items }: { items: Breadcrumb[] }) {
   </nav>;
 }
 
-export function LogoutButton() {
+function LogoutButton() {
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

@@ -1,0 +1,30 @@
+export default {
+  mutate: [
+    "lib/refueling-calculator.ts",
+    "lib/route-normalize.ts",
+    "lib/operation-normalize.ts",
+    "lib/rate-limit.ts",
+  ],
+  testRunner: "command",
+  commandRunner: {
+    command: "node --test tests/refueling-calculator.test.mjs tests/route-normalize.test.mjs tests/operation-normalize.test.mjs tests/rate-limit.test.mjs",
+  },
+  checkers: ["typescript"],
+  tsconfigFile: "tsconfig.json",
+  ignorePatterns: [
+    "/.wrangler/**",
+    "/coverage/**",
+    "/dist/**",
+    "/outputs/**",
+    "/playwright-report/**",
+    "/public/**",
+    "/test-results/**",
+    "/tmp/**",
+  ],
+  coverageAnalysis: "off",
+  concurrency: 2,
+  timeoutMS: 15000,
+  thresholds: { high: 80, low: 60, break: 55 },
+  reporters: ["clear-text", "progress", "html"],
+  htmlReporter: { fileName: "reports/mutation/mutation.html" },
+};

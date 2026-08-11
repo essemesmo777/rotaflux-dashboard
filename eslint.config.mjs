@@ -10,9 +10,15 @@ import tseslint from "typescript-eslint";
 const eslintConfig = defineConfig([
   globalIgnores([
     ".next/**",
+    ".stryker-tmp/**",
+    "coverage/**",
     "dist/**",
     "out/**",
     "build/**",
+    "playwright-report/**",
+    "reports/**",
+    "test-results/**",
+    "tmp/**",
     "next-env.d.ts",
   ]),
   eslint.configs.recommended,
