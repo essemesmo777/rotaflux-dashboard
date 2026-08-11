@@ -50,6 +50,18 @@ npm test
 
 Registrar qualquer validação não executada, com a justificativa e o risco correspondente. Mudanças de autenticação, autorização, banco, RLS, uploads ou deploy exigem testes específicos além da suíte padrão.
 
+## Esteira obrigatória antes da `main`
+
+Toda Pull Request deve passar pelos checks definidos em `.github/workflows/quality.yml` e `.github/workflows/security.yml`. A proteção da branch `main` deve exigir Pull Request, checks atualizados, resolução de conversas e impedir force push e exclusão.
+
+O contrato vigente inclui typecheck, ESLint, Biome, Commitlint, Knip, contrato de arquitetura, testes unitários e de integração com cobertura mínima, Playwright, auditoria de dependências de produção, Semgrep CE e performance budget. O Stryker roda semanalmente ou sob demanda. Consulte `docs/architecture/quality-contract.md` antes de adicionar bibliotecas, camadas, serviços ou componentes.
+
+Use uma solução por responsabilidade enquanto não existir requisito concreto para outra: Sentry para observabilidade do Worker e Playwright para E2E. Datadog, New Relic, OpenTelemetry e Endtest só devem ser adicionados após registrar na Issue o problema que resolvem, o responsável operacional, custo, dados tratados e critério de sucesso. Não instalar ferramentas sobrepostas apenas para cumprir uma lista.
+
+O rate limit de login, recuperação e OCR é aplicado no Worker e persistido no D1 sem armazenar o endereço IP em claro. Alterações nos limites ou no comportamento de falha exigem teste específico e revisão de segurança.
+
+Termos de Uso e Política de Privacidade só podem ser marcados como aprovados quando houver evidência de revisão por profissional jurídico responsável. Agentes e automações não podem substituir ou presumir essa aprovação.
+
 ## Arquitetura e serviços atuais
 
 - Aplicação: React 19 com Vinext e roteamento no estilo App Router.

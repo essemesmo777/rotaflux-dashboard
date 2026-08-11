@@ -1,0 +1,25 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "app/**/page.tsx",
+    "app/**/layout.tsx",
+    "app/api/**/route.ts",
+    "worker/index.ts",
+    "tests/**/*.mjs",
+    "tests/**/*.ts",
+    "scripts/**/*.mjs",
+    "next.config.ts"
+  ],
+  "project": [
+    "app/**/*.{ts,tsx}",
+    "components/**/*.{ts,tsx}",
+    "lib/**/*.{ts,tsx}",
+    "worker/**/*.ts",
+    "db/**/*.ts",
+    "build/**/*.ts",
+    "tests/**/*.{mjs,ts}",
+    "scripts/**/*.mjs",
+    "*.{ts,mjs}"
+  ],
+  "ignoreDependencies": ["@stryker-mutator/command-runner", "next", "tailwindcss"]
+}

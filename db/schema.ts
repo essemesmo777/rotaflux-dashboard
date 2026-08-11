@@ -45,3 +45,15 @@ export const routes = sqliteTable(
     index("idx_routes_import_id").on(table.importId),
   ],
 );
+
+export const apiRateLimits = sqliteTable(
+  "api_rate_limits",
+  {
+    bucketKey: text("bucket_key").primaryKey(),
+    scope: text("scope").notNull(),
+    requestCount: integer("request_count").notNull().default(1),
+    resetAt: integer("reset_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [index("idx_api_rate_limits_reset_at").on(table.resetAt)],
+);

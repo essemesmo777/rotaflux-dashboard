@@ -1,0 +1,10 @@
+{
+  "javascript": {
+    "largestGzipBytes": 307200,
+    "totalGzipBytes": 921600
+  },
+  "staticHtml": {
+    "public/dashboard.html": 262144,
+    "public/operations.html": 524288
+  }
+}
