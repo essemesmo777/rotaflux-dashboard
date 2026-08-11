@@ -24,7 +24,7 @@ O comando `npm run arch:check` bloqueia dependências proibidas e exige que todo
 
 ## Esteira
 
-Cada Pull Request executa typecheck, ESLint, Biome, contrato de arquitetura, Knip, testes unitários/de integração com cobertura mínima, auditoria de dependências de produção, build, performance budget e Playwright. CodeQL e dependency review complementam a revisão de segurança. Mutation testing roda semanalmente e sob demanda, pois seu custo não deve alongar toda PR.
+Cada Pull Request executa typecheck, ESLint, Biome, contrato de arquitetura, Knip, testes unitários/de integração com cobertura mínima, auditoria de dependências de produção, build, performance budget, Playwright e Semgrep CE. O repositório privado não possui licença do GitHub Advanced Security, então CodeQL e Dependency Review não são checks viáveis; mutation testing roda semanalmente e sob demanda, pois seu custo não deve alongar toda PR.
 
 Codecov recebe o relatório LCOV; o limite de cobertura permanece bloqueante mesmo quando o serviço externo estiver indisponível. Sentry é a única integração APM inicial, adequada ao Cloudflare Worker. Datadog, New Relic e OpenTelemetry não são combinados agora porque sobrepõem função e aumentariam custo e instrumentação sem benefício proporcional. A decisão deve ser revista se surgir requisito concreto de correlação distribuída ou operação multi-runtime.
 

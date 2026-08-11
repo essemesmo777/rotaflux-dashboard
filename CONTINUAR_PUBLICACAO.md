@@ -52,9 +52,9 @@ Registrar qualquer validação não executada, com a justificativa e o risco cor
 
 ## Esteira obrigatória antes da `main`
 
-Toda Pull Request deve passar pelos checks definidos em `.github/workflows/quality.yml` e `.github/workflows/codeql.yml`. A proteção da branch `main` deve exigir Pull Request, checks atualizados, resolução de conversas e impedir force push e exclusão.
+Toda Pull Request deve passar pelos checks definidos em `.github/workflows/quality.yml` e `.github/workflows/security.yml`. A proteção da branch `main` deve exigir Pull Request, checks atualizados, resolução de conversas e impedir force push e exclusão.
 
-O contrato vigente inclui typecheck, ESLint, Biome, Commitlint, Knip, contrato de arquitetura, testes unitários e de integração com cobertura mínima, Playwright, auditoria de dependências, CodeQL, dependency review e performance budget. O Stryker roda semanalmente ou sob demanda. Consulte `docs/architecture/quality-contract.md` antes de adicionar bibliotecas, camadas, serviços ou componentes.
+O contrato vigente inclui typecheck, ESLint, Biome, Commitlint, Knip, contrato de arquitetura, testes unitários e de integração com cobertura mínima, Playwright, auditoria de dependências de produção, Semgrep CE e performance budget. O Stryker roda semanalmente ou sob demanda. Consulte `docs/architecture/quality-contract.md` antes de adicionar bibliotecas, camadas, serviços ou componentes.
 
 Use uma solução por responsabilidade enquanto não existir requisito concreto para outra: Sentry para observabilidade do Worker e Playwright para E2E. Datadog, New Relic, OpenTelemetry e Endtest só devem ser adicionados após registrar na Issue o problema que resolvem, o responsável operacional, custo, dados tratados e critério de sucesso. Não instalar ferramentas sobrepostas apenas para cumprir uma lista.
 

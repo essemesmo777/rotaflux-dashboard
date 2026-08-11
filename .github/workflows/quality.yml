@@ -40,7 +40,6 @@ jobs:
       - run: npm run deadcode:check
       - run: npm run test:coverage
       - run: npm run security:audit
-      - run: npm run build
       - run: npm run perf:check
       - name: Publish coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -81,8 +80,3 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run security:audit
-      - name: Review dependency changes
-        if: github.event_name == 'pull_request'
-        uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: high

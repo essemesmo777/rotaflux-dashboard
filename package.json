@@ -14,7 +14,7 @@
     "test:all": "node --test \"tests/*.test.mjs\"",
     "test:unit": "node --test tests/ocr-parser.test.mjs tests/operation-normalize.test.mjs tests/refueling-calculator.test.mjs tests/route-normalize.test.mjs tests/rate-limit.test.mjs",
     "test:integration": "node --test tests/auth-navigation.test.mjs tests/rendered-html.test.mjs",
-    "test:coverage": "c8 --reporter=text --reporter=lcov --check-coverage --lines 80 --functions 80 --branches 70 --statements 80 --include=lib/**/*.ts --include=app/api/auth/logout/route.ts --include=app/api/auth/refresh/route.ts --exclude=dist/** npm run test:all",
+    "test:coverage": "npm run build && c8 --reporter=text --reporter=lcov --check-coverage --lines 80 --functions 80 --branches 70 --statements 80 --include=lib/**/*.ts --include=app/api/auth/logout/route.ts --include=app/api/auth/refresh/route.ts --exclude=dist/** npm run test:all",
     "test:e2e": "playwright test",
     "test:mutation": "stryker run",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
@@ -24,7 +24,7 @@
     "deadcode:check": "knip",
     "security:audit": "npm audit --omit=dev --audit-level=high",
     "perf:check": "node scripts/check-performance-budget.mjs",
-    "quality:ci": "npm run typecheck && npm run lint && npm run lint:biome && npm run arch:check && npm run deadcode:check && npm run test:coverage && npm run security:audit && npm run build && npm run perf:check",
+    "quality:ci": "npm run typecheck && npm run lint && npm run lint:biome && npm run arch:check && npm run deadcode:check && npm run test:coverage && npm run security:audit && npm run perf:check",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply site-creator-d1 --local --persist-to .wrangler/vite-state --config wrangler.local.jsonc"
   },
