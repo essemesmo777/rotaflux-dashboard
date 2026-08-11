@@ -95,6 +95,8 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
   assert.match(dashboard, /id="routeEndOdometer"[^>]*required/);
   assert.doesNotMatch(dashboard, /id="routeLiters"[^>]*required/);
   assert.doesNotMatch(dashboard, /id="routeVehicle"[^>]*required/);
+  assert.match(dashboard, /Valor recebido \(R\$, opcional\)/);
+  assert.doesNotMatch(dashboard, /id="routeRevenue"[^>]*required/);
   assert.match(operations, /Tirar foto/);
   assert.match(operations, /table-skeleton/);
   assert.match(operations, /loadLibrary/);
@@ -120,6 +122,8 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
   assert.match(operations, /Foto da bomba/);
   assert.match(operationsRoute, /operationDuplicateKey/);
   assert.match(operationsRoute, /route_refuelings/);
+  assert.doesNotMatch(operationsRoute, /route_refuelings\?on_conflict=id/);
+  assert.match(operationsRoute, /method: "PATCH"/);
   assert.match(operationsRoute, /Possível duplicidade/);
   assert.match(importsRoute, /reviewed/);
   assert.match(importsRoute, /extractionDiagnostics/);

@@ -29,6 +29,9 @@ test("requires valid departure and arrival odometers", () => {
   assert.throws(() => normalizeRoute({ ...prioritized, endOdometer: 285500 }), /chegada deve ser maior/i);
 });
 
-test("keeps value received required", () => {
-  assert.throws(() => normalizeRoute({ ...prioritized, revenue: "" }), /valor recebido/i);
+test("keeps value received optional and stores a blank value as zero", () => {
+  assert.equal(normalizeRoute({ ...prioritized, revenue: "" }).revenue, 0);
+  assert.equal(normalizeRoute({ ...prioritized, revenue: null }).revenue, 0);
+  assert.equal(normalizeRoute({ ...prioritized, revenue: 1380 }).revenue, 1380);
+  assert.throws(() => normalizeRoute({ ...prioritized, revenue: -1 }), /não pode ser negativo/i);
 });
