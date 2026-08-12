@@ -74,7 +74,8 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
   assert.match(importsRoute, /storage\/v1\/object\/route-imports/);
   assert.match(importsRoute, /organization_id/);
   assert.match(auth, /HttpOnly/);
-  assert.match(home, /LazyFrame source="\/dashboard\.html"/);
+  assert.match(home, /OperationalResultsDashboard variant="dashboard"/);
+  assert.match(home, /AuthenticatedLayout/);
   assert.match(lazyFrame, /frame-skeleton/);
   assert.match(lazyFrame, /onLoad/);
   assert.match(motionStyles, /prefers-reduced-motion: reduce/);
@@ -163,13 +164,16 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
 });
 
 test("protects and integrates the operational result module", async () => {
-  const [migration, page, dashboard, resultApi, recordsApi, closingsApi] = await Promise.all([
+  const [migration, financialMigration, financialIndexes, page, dashboard, resultApi, recordsApi, closingsApi, server] = await Promise.all([
     readFile(new URL("../supabase/migrations/20260811224404_operational_results_foundation.sql", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/20260812000233_integrated_financial_dashboard.sql", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/20260812002824_integrated_financial_dashboard_indexes.sql", import.meta.url), "utf8"),
     readFile(new URL("../app/resultado-operacional/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/operational-results-dashboard.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/operational-results/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/operational-records/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/operational-closings/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/operational-results-server.ts", import.meta.url), "utf8"),
   ]);
   assert.match(page, /SUPER_ADMIN/);
   assert.match(page, /COMPANY_ADMIN/);
@@ -180,9 +184,29 @@ test("protects and integrates the operational result module", async () => {
   assert.match(migration, /force row level security/g);
   assert.match(migration, /routes_contract_same_organization_fk/);
   assert.match(migration, /Somente administradores podem associar contratos financeiros/);
+  assert.match(financialMigration, /create table public\.operational_revenues/);
+  assert.match(financialMigration, /create table public\.contract_invoices/);
+  assert.match(financialMigration, /create table public\.contract_payments/);
+  assert.match(financialMigration, /create table public\.financial_settings/);
+  assert.match(financialMigration, /operational_revenues_dedupe_key/);
+  assert.match(financialMigration, /force row level security/g);
+  assert.doesNotMatch(financialMigration, /grant delete/i);
+  assert.match(financialIndexes, /operational_revenues_org_route_idx/);
+  assert.match(financialIndexes, /contract_payments_org_invoice_idx/);
   assert.match(resultApi, /canManageCompany/);
+  assert.match(resultApi, /contractorId/);
+  assert.match(resultApi, /line/);
   assert.match(recordsApi, /organization_id: auth\.session\.profile\.organization_id/);
+  assert.match(recordsApi, /manual_revenue/);
+  assert.match(recordsApi, /resolution=merge-duplicates/);
   assert.match(closingsApi, /snapshot/);
+  assert.match(closingsApi, /preferSnapshot: false/);
+  assert.match(server, /closedSnapshot/);
+  assert.match(server, /CLOSED_PERIOD/);
   assert.match(dashboard, /OperBase_resultado_/);
+  assert.match(dashboard, /Dashboard financeiro/);
+  assert.match(dashboard, /Entradas x saídas/);
+  assert.match(dashboard, /Distribuição dos custos/);
+  assert.match(dashboard, /Últimas movimentações/);
   for (const sheet of ["Resumo", "Receitas", "Combustivel", "Manutencao", "Despesas", "Veiculos", "Contratos"]) assert.match(dashboard, new RegExp(`add\\("${sheet}"`));
 });

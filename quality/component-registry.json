@@ -22,7 +22,7 @@
     },
     {
       "path": "components/operational-results-dashboard.tsx",
-      "purpose": "Resultado operacional, contratos, custos, fechamentos e exportação em Excel"
+      "purpose": "Dashboard financeiro integrado, resultado operacional, lançamentos, drill-down, configurações, fechamentos e Excel"
     }
   ]
 }
