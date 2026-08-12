@@ -18,7 +18,8 @@ export type OperationalContract = {
   provisionValue: number;
   startDate: string;
   endDate: string | null;
-  status: "ACTIVE" | "INACTIVE";
+  status: "ACTIVE" | "INACTIVE" | "CLOSED" | "DELETED";
+  deletedAt?: string | null;
 };
 
 type OperationalRoute = {
@@ -245,6 +246,7 @@ function filteredDataset(dataset: OperationalDataset, filters: OperationalFilter
   const contracts = new Map(dataset.contracts.map((contract) => [contract.id, contract]));
   const contractMatches = (contractId: string | null) => {
     const contract = contractId ? contracts.get(contractId) : null;
+    if (contractId && !contract) return false;
     if (filters.contractId && contractId !== filters.contractId) return false;
     if (filters.contractorId && contract?.contractorId !== filters.contractorId) return false;
     if (lineQuery && !contract?.lineName.toLocaleLowerCase("pt-BR").includes(lineQuery)) return false;
@@ -442,7 +444,7 @@ function movement(type: string, origin: string, date: string, value: number, des
 export function calculateOperationalResult(datasetInput: OperationalDataset, filters: OperationalFilters) {
   const dataset = {
     ...datasetInput,
-    contracts: datasetInput.contracts ?? [],
+    contracts: (datasetInput.contracts ?? []).filter((contract) => !contract.deletedAt && contract.status !== "DELETED"),
     routes: datasetInput.routes ?? [],
     refuelings: datasetInput.refuelings ?? [],
     maintenance: datasetInput.maintenance ?? [],

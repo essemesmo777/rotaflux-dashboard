@@ -137,3 +137,13 @@ export async function listAssignableDrivers(token: string, organizationId: strin
   if (!response.ok) return [];
   return (await response.json()) as Array<{ id: string; name: string; phone: string | null; auth_user_id: string | null }>;
 }
+
+export async function getAssignableContract(token: string, organizationId: string, contractId: string) {
+  const response = await supabaseFetch(
+    `/rest/v1/contracts?id=eq.${encodeURIComponent(contractId)}&organization_id=eq.${encodeURIComponent(organizationId)}&status=eq.ACTIVE&deleted_at=is.null&select=id,name,status`,
+    { token },
+  );
+  if (!response.ok) return null;
+  const rows = (await response.json()) as Array<{ id: string; name: string; status: "ACTIVE" }>;
+  return rows[0] ?? null;
+}

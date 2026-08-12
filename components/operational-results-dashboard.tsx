@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { operationalExcelSummary } from "../lib/operational-results";
 import MotionBackdrop from "./motion-backdrop";
@@ -220,6 +221,11 @@ export default function OperationalResultsDashboard({ variant = "result" }: { va
     finally { setLoading(false); }
   }, []);
   useEffect(() => { queueMicrotask(() => void load(initialFilters)); }, [load]);
+  useEffect(() => {
+    const refresh = () => void load(filters);
+    window.addEventListener("operbase:contracts-changed", refresh);
+    return () => window.removeEventListener("operbase:contracts-changed", refresh);
+  }, [filters, load]);
 
   const choices = useMemo(() => ({
     lines: [...new Set(result?.details.contracts.map((item) => item.lineName).filter(Boolean) || [])].sort(),
@@ -277,7 +283,7 @@ export default function OperationalResultsDashboard({ variant = "result" }: { va
   const maxChart = Math.max(1, ...(result?.monthly.map((item) => Math.max(Number(item.revenue), Number(item.expenses), Math.abs(Number(item.operationalResult)))) || []));
 
   return <main className="operational-page">
-    <header className="operational-title"><div><span className="operational-eyebrow">Dados reais · {organization}</span><h1>{variant === "dashboard" ? "Dashboard financeiro" : "Resultado Operacional"}</h1><p>Contratos, faturamentos, recebimentos, KM e custos consolidados automaticamente.</p></div><div className="operational-actions"><button className="secondary-action" onClick={() => setDialog("settings")} disabled={!result}>Configurações</button><button className="secondary-action" onClick={exportExcel} disabled={!result || saving === "excel"}>{saving === "excel" ? "Gerando…" : "Exportar Excel"}</button><button className="primary-action" onClick={closePeriod} disabled={!result || saving === "closing" || Boolean(result?.snapshotMeta)}>{saving === "closing" ? "Fechando…" : result?.snapshotMeta ? "Período fechado" : "Fechar período"}</button></div></header>
+    <header className="operational-title"><div><span className="operational-eyebrow">Dados reais · {organization}</span><h1>{variant === "dashboard" ? "Dashboard financeiro" : "Resultado Operacional"}</h1><p>Contratos, faturamentos, recebimentos, KM e custos consolidados automaticamente.</p></div><div className="operational-actions"><Link className="secondary-action" href="/contratos">Gerenciar contratos</Link><button className="secondary-action" onClick={() => setDialog("settings")} disabled={!result}>Configurações</button><button className="secondary-action" onClick={exportExcel} disabled={!result || saving === "excel"}>{saving === "excel" ? "Gerando…" : "Exportar Excel"}</button><button className="primary-action" onClick={closePeriod} disabled={!result || saving === "closing" || Boolean(result?.snapshotMeta)}>{saving === "closing" ? "Fechando…" : result?.snapshotMeta ? "Período fechado" : "Fechar período"}</button></div></header>
     <div className="preset-bar" aria-label="Períodos rápidos"><span>Período</span>{[["TODAY", "Hoje"], ["THIS_WEEK", "Esta semana"], ["THIS_MONTH", "Este mês"], ["PREVIOUS_MONTH", "Mês anterior"], ["THIS_YEAR", "Este ano"]].map(([value, title]) => <button type="button" key={value} disabled={loading} onClick={() => void applyPreset(value)}>{title}</button>)}</div>
     <form className="operational-filters" onSubmit={apply}><Field label="Início"><input type="date" value={draft.startDate} onChange={(event) => setDraft({ ...draft, startDate: event.target.value })} required /></Field><Field label="Fim"><input type="date" value={draft.endDate} onChange={(event) => setDraft({ ...draft, endDate: event.target.value })} required /></Field><Field label="Contrato"><select value={draft.contractId} onChange={(event) => setDraft({ ...draft, contractId: event.target.value })}><option value="">Todos</option>{result?.details.contracts.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></Field><Field label="Contratante"><select value={draft.contractorId} onChange={(event) => setDraft({ ...draft, contractorId: event.target.value })}><option value="">Todos</option>{contractors.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></Field><Field label="Linha"><select value={draft.line} onChange={(event) => setDraft({ ...draft, line: event.target.value })}><option value="">Todas</option>{choices.lines.map((item) => <option key={item}>{item}</option>)}</select></Field><Field label="Rota"><select value={draft.route} onChange={(event) => setDraft({ ...draft, route: event.target.value })}><option value="">Todas</option>{choices.routes.map((item) => <option key={item}>{item}</option>)}</select></Field><Field label="Veículo"><select value={draft.vehicle} onChange={(event) => setDraft({ ...draft, vehicle: event.target.value })}><option value="">Todos</option>{choices.vehicles.map((item) => <option key={item}>{item}</option>)}</select></Field><Field label="Motorista"><select value={draft.driver} onChange={(event) => setDraft({ ...draft, driver: event.target.value })}><option value="">Todos</option>{choices.drivers.map((item) => <option key={item}>{item}</option>)}</select></Field><button className="primary-action filter-action" disabled={loading}>{loading ? "Calculando…" : "Aplicar filtros"}</button></form>
     {error && <div className="form-error operational-notice" role="alert">{error}</div>}{notice && <div className="form-success operational-notice" role="status">{notice}</div>}

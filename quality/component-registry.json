@@ -9,6 +9,10 @@
       "purpose": "Cabeçalho, navegação, breadcrumb e encerramento de sessão autenticada"
     },
     {
+      "path": "components/contracts-management.tsx",
+      "purpose": "Gestão completa de contratos, status, lixeira, restauração, duplicação e exclusão segura"
+    },
+    {
       "path": "components/lazy-frame.tsx",
       "purpose": "Iframe com skeleton, estado de carregamento e transição"
     },
