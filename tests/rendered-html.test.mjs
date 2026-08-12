@@ -164,7 +164,7 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
 });
 
 test("protects and integrates the operational result module", async () => {
-  const [migration, financialMigration, financialIndexes, page, dashboard, resultApi, recordsApi, closingsApi, server] = await Promise.all([
+  const [migration, financialMigration, financialIndexes, page, dashboard, resultApi, recordsApi, closingsApi, server, operationalResultsLogic] = await Promise.all([
     readFile(new URL("../supabase/migrations/20260811224404_operational_results_foundation.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/20260812000233_integrated_financial_dashboard.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/20260812002824_integrated_financial_dashboard_indexes.sql", import.meta.url), "utf8"),
@@ -174,6 +174,7 @@ test("protects and integrates the operational result module", async () => {
     readFile(new URL("../app/api/operational-records/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/operational-closings/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/operational-results-server.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/operational-results.ts", import.meta.url), "utf8"),
   ]);
   assert.match(page, /SUPER_ADMIN/);
   assert.match(page, /COMPANY_ADMIN/);
@@ -203,9 +204,17 @@ test("protects and integrates the operational result module", async () => {
   assert.match(closingsApi, /preferSnapshot: false/);
   assert.match(server, /closedSnapshot/);
   assert.match(server, /CLOSED_PERIOD/);
+  assert.match(server, /requiresExecutiveUpgrade/);
+  assert.match(server, /historical\.details/);
   assert.match(dashboard, /OperBase_resultado_/);
   assert.match(dashboard, /Dashboard financeiro/);
-  assert.match(dashboard, /Entradas x saídas/);
+  assert.match(dashboard, /Previsto, faturado, recebido e custos/);
+  assert.match(dashboard, /Funil de faturamento/);
+  assert.match(dashboard, /Insights acionáveis/);
+  assert.match(dashboard, /Alertas priorizados/);
+  assert.match(dashboard, /Valide documentos e regras do contrato antes de agir/);
+  assert.match(operationalResultsLogic, /billingPipeline/);
+  assert.match(operationalResultsLogic, /invoice-opportunity/);
   assert.match(dashboard, /Distribuição dos custos/);
   assert.match(dashboard, /Últimas movimentações/);
   for (const sheet of ["Resumo", "Receitas", "Combustivel", "Manutencao", "Despesas", "Veiculos", "Contratos"]) assert.match(dashboard, new RegExp(`add\\("${sheet}"`));

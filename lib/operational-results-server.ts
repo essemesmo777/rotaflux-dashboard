@@ -152,8 +152,26 @@ async function closedSnapshot(token: string, organizationId: string, filters: Op
       && expectedEntries.every(([key, value]) => String(candidate[key] ?? "") === value);
   });
   if (!match || !match.snapshot || typeof match.snapshot !== "object") return null;
+  const historical = match.snapshot as OperationalResult;
+  const requiresExecutiveUpgrade = !("billingPipeline" in historical) || !Array.isArray(historical.insights)
+    || historical.alerts.some((alert) => !("title" in alert));
+  let snapshot = historical;
+  if (requiresExecutiveUpgrade && historical.details && historical.settings) {
+    const upgraded = calculateOperationalResult({ ...historical.details, settings: historical.settings }, historical.filters ?? filters);
+    snapshot = {
+      ...historical,
+      monthly: upgraded.monthly,
+      billingPipeline: upgraded.billingPipeline,
+      costDistribution: upgraded.costDistribution,
+      alerts: upgraded.alerts,
+      insights: upgraded.insights,
+      byVehicle: upgraded.byVehicle,
+      byContract: upgraded.byContract,
+      latestMovements: upgraded.latestMovements,
+    };
+  }
   return {
-    ...(match.snapshot as OperationalResult),
+    ...snapshot,
     snapshotMeta: { id: text(match.id), revision: number(match.revision), closedAt: text(match.closed_at), source: "CLOSED_PERIOD" },
   };
 }
