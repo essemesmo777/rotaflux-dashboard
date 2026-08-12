@@ -157,6 +157,27 @@ export type OperationalDataset = {
   settings: FinancialSettings;
 };
 
+export type OperationalAlert = {
+  id: string;
+  level: "info" | "warning" | "critical";
+  category: "Faturamento" | "Recebimentos" | "Custos" | "Margem" | "Eficiência";
+  title: string;
+  message: string;
+  metric?: number;
+  metricFormat?: "money" | "percent" | "number";
+};
+
+export type OperationalInsight = {
+  id: string;
+  priority: "high" | "medium" | "opportunity";
+  category: "Faturamento" | "Recebimentos" | "Custos" | "Margem" | "Eficiência" | "Cadastro";
+  title: string;
+  description: string;
+  evidence: string;
+  action?: "invoice" | "payment" | "revenue" | "maintenance" | "contract";
+  actionLabel?: string;
+};
+
 type ContractRevenue = {
   revenue: number;
   contractedRevenue: number;
@@ -372,6 +393,7 @@ function calculateCore(dataset: OperationalDataset, filters: OperationalFilters)
       additionalRevenue: round(approvedAdditional),
       estimatedAdditional: round(estimatedAdditional),
       billed: round(billed),
+      receivedFromInvoices: round(paidAgainstInvoices),
       received: round(received),
       pending: round(pending),
       totalKm: round(totalKm, 1),
@@ -523,7 +545,15 @@ export function calculateOperationalResult(datasetInput: OperationalDataset, fil
       startDate: filters.startDate > monthStart ? filters.startDate : monthStart,
       endDate: filters.endDate < monthEnd ? filters.endDate : monthEnd,
     });
-    return { month, revenue: calculation.totals.received, expenses: calculation.totals.expenses, operationalResult: calculation.totals.operationalResult };
+    return {
+      month,
+      predicted: calculation.totals.predictedRevenue,
+      billed: calculation.totals.billed,
+      revenue: calculation.totals.received,
+      expenses: calculation.totals.expenses,
+      operationalResult: calculation.totals.operationalResult,
+      operationalMargin: calculation.totals.operationalMargin,
+    };
   });
 
   const distributionBase = [
@@ -566,18 +596,122 @@ export function calculateOperationalResult(datasetInput: OperationalDataset, fil
   previousStartDate.setUTCMonth(previousStartDate.getUTCMonth() - 1);
   const previousStart = previousStartDate.toISOString().slice(0, 10);
   const previous = calculateCore(dataset, { ...filters, startDate: previousStart, endDate: previousEnd });
-  const alerts: Array<{ level: "info" | "warning" | "critical"; message: string }> = [];
+  const overdueAmount = scoped.invoices
+    .filter((invoice) => invoice.status !== "PAID" && invoice.dueOn < filters.endDate)
+    .reduce((sum, invoice) => {
+      const paid = dataset.payments
+        .filter((payment) => payment.status === "RECEIVED" && payment.invoiceId === invoice.id && payment.receivedOn <= filters.endDate)
+        .reduce((total, payment) => total + payment.amount, 0);
+      return sum + Math.max(0, invoice.amount - paid);
+    }, 0);
+  const billingPipeline = {
+    predicted: totals.predictedRevenue,
+    billed: totals.billed,
+    received: totals.receivedFromInvoices,
+    toBill: round(Math.max(0, totals.predictedRevenue - totals.billed)),
+    toCollect: round(Math.max(0, totals.billed - totals.receivedFromInvoices)),
+    overdue: round(overdueAmount),
+    billingRate: totals.predictedRevenue > 0 ? round(Math.min(100, totals.billed / totals.predictedRevenue * 100), 1) : null,
+    collectionRate: totals.billed > 0 ? round(Math.min(100, totals.receivedFromInvoices / totals.billed * 100), 1) : null,
+  };
+  const alerts: OperationalAlert[] = [];
+  if (totals.operationalResult < 0) alerts.push({
+    id: "negative-margin", level: "critical", category: "Margem", title: "Operação no vermelho",
+    message: "As saídas superaram as entradas recebidas no período. Revise custos e cobranças antes do fechamento.",
+    metric: totals.operationalResult, metricFormat: "money",
+  });
   if (previous.totals.expenses > 0) {
     const change = (totals.expenses - previous.totals.expenses) / previous.totals.expenses * 100;
-    if (change >= dataset.settings.costAlertPercent) alerts.push({ level: "warning", message: `Despesas estão ${round(change, 1)}% acima do período anterior.` });
+    if (change >= dataset.settings.costAlertPercent) alerts.push({
+      id: "expense-growth", level: "warning", category: "Custos", title: "Despesas aceleraram",
+      message: `O total está ${round(change, 1)}% acima do período anterior comparável.`, metric: round(change, 1), metricFormat: "percent",
+    });
   }
   const fuelShare = totals.expenses > 0 ? totals.fuelCost / totals.expenses * 100 : 0;
-  if (fuelShare >= dataset.settings.costAlertPercent) alerts.push({ level: "info", message: `Combustível representa ${round(fuelShare, 1)}% das despesas do período.` });
-  byContract.filter((item) => item.pending > 0).slice(0, 3).forEach((item) => alerts.push({ level: "warning", message: `${item.contractName} possui ${round(item.pending)} em valores a receber.` }));
-  if (totals.excessKm > dataset.settings.kmAlertLimit) alerts.push({ level: "warning", message: `A operação excedeu ${round(totals.excessKm, 1)} km do volume contratado.` });
-  if (totals.estimatedAdditional > 0) alerts.push({ level: "info", message: `Existem ${round(totals.estimatedAdditional)} em KM adicionais estimados ainda sujeitos à aprovação.` });
+  if (fuelShare >= Math.max(35, dataset.settings.costAlertPercent)) alerts.push({
+    id: "fuel-share", level: "info", category: "Custos", title: "Combustível concentra os custos",
+    message: `Abastecimentos representam ${round(fuelShare, 1)}% das despesas do período.`, metric: round(fuelShare, 1), metricFormat: "percent",
+  });
+  if (billingPipeline.toBill > 0) alerts.push({
+    id: "unbilled-revenue", level: "warning", category: "Faturamento", title: "Receita prevista ainda não faturada",
+    message: "Confira a medição e emita o faturamento correspondente ao período.", metric: billingPipeline.toBill, metricFormat: "money",
+  });
+  if (billingPipeline.toCollect > 0) alerts.push({
+    id: "uncollected-invoices", level: "warning", category: "Recebimentos", title: "Faturas aguardando recebimento",
+    message: "Há valor faturado sem recebimento conciliado até o fim do período.", metric: billingPipeline.toCollect, metricFormat: "money",
+  });
+  if (billingPipeline.overdue > 0) alerts.push({
+    id: "overdue-invoices", level: "critical", category: "Recebimentos", title: "Faturamentos vencidos",
+    message: "Priorize a conferência documental e o contato com os contratantes responsáveis.", metric: billingPipeline.overdue, metricFormat: "money",
+  });
+  if (totals.excessKm > dataset.settings.kmAlertLimit) alerts.push({
+    id: "excess-km", level: "warning", category: "Eficiência", title: "KM acima do volume contratado",
+    message: "Valide se o excedente pode ser faturado ou se a rota precisa ser ajustada.", metric: totals.excessKm, metricFormat: "number",
+  });
+  if (totals.estimatedAdditional > 0) alerts.push({
+    id: "estimated-additional", level: "info", category: "Faturamento", title: "Adicional estimado pendente de aprovação",
+    message: "O valor não entra como receita aprovada até a conferência e o lançamento.", metric: totals.estimatedAdditional, metricFormat: "money",
+  });
   const averageVehicleCost = byVehicle.length ? byVehicle.reduce((sum, item) => sum + (item.costPerKm ?? 0), 0) / byVehicle.length : 0;
-  byVehicle.filter((item) => (item.costPerKm ?? 0) > averageVehicleCost * 1.2).slice(0, 2).forEach((item) => alerts.push({ level: "warning", message: `Veículo ${item.plate} está com custo por KM acima da média.` }));
+  const expensiveVehicles = byVehicle.filter((item) => averageVehicleCost > 0 && (item.costPerKm ?? 0) > averageVehicleCost * 1.2).slice(0, 2);
+  expensiveVehicles.forEach((item) => alerts.push({
+    id: `vehicle-cost-${item.plate}`, level: "warning", category: "Eficiência", title: `Veículo ${item.plate} acima da média`,
+    message: "Revise abastecimentos, manutenção e alocação antes de ampliar o uso desse veículo.", metric: item.costPerKm ?? 0, metricFormat: "money",
+  }));
+  const alertOrder = { critical: 0, warning: 1, info: 2 };
+  alerts.sort((a, b) => alertOrder[a.level] - alertOrder[b.level]);
+
+  const insights: OperationalInsight[] = [];
+  if (!byContract.length) insights.push({
+    id: "create-contract", priority: "high", category: "Cadastro", title: "Cadastre contratos para projetar faturamento",
+    description: "Sem contrato no filtro atual, o painel não consegue comparar receita prevista, faturada e recebida.",
+    evidence: `${scoped.routes.length} operação(ões) encontrada(s) no período.`, action: "contract", actionLabel: "Cadastrar contrato",
+  });
+  if (billingPipeline.toBill > 0) insights.push({
+    id: "invoice-opportunity", priority: "high", category: "Faturamento", title: "Transforme receita prevista em faturamento",
+    description: "Revise medições e condições contratuais e, após validação, emita as faturas que ainda não constam no período.",
+    evidence: `${round(billingPipeline.billingRate ?? 0, 1)}% da receita prevista está faturada.`, action: "invoice", actionLabel: "Registrar faturamento",
+  });
+  if (billingPipeline.toCollect > 0) insights.push({
+    id: "collection-opportunity", priority: "high", category: "Recebimentos", title: "Priorize a cobrança do que já foi faturado",
+    description: "Concilie os recebimentos e acompanhe com os contratantes os documentos que continuam em aberto.",
+    evidence: billingPipeline.overdue > 0
+      ? `${round(billingPipeline.overdue)} já ultrapassou o vencimento; ${round(billingPipeline.collectionRate ?? 0, 1)}% do faturado foi recebido.`
+      : `${round(billingPipeline.collectionRate ?? 0, 1)}% do faturado foi recebido.`,
+    action: "payment", actionLabel: "Registrar recebimento",
+  });
+  if (totals.estimatedAdditional > 0) insights.push({
+    id: "approve-additional", priority: "opportunity", category: "Faturamento", title: "Converta KM excedente validado em receita",
+    description: "Confira os comprovantes e as regras do contrato antes de registrar o adicional aprovado.",
+    evidence: `${round(totals.excessKm, 1)} km excedentes representam até ${round(totals.estimatedAdditional)} em valor estimado.`, action: "revenue", actionLabel: "Registrar adicional",
+  });
+  if (totals.operationalResult < 0) insights.push({
+    id: "recover-margin", priority: "high", category: "Margem", title: "Recupere a margem antes de crescer a operação",
+    description: "Ataque primeiro os custos mais representativos e o recebimento pendente; aumentar volume agora pode ampliar a perda.",
+    evidence: `Margem operacional de ${round(totals.operationalMargin, 1)}% no período.`,
+  });
+  const largestCost = costDistribution[0];
+  if (largestCost && largestCost.percent >= 30) insights.push({
+    id: "largest-cost", priority: "medium", category: "Custos", title: `Comece a redução por ${largestCost.category.toLocaleLowerCase("pt-BR")}`,
+    description: "Compare fornecedores, frequência, consumo por veículo e lançamentos fora do padrão antes de cortar custos lineares.",
+    evidence: `${round(largestCost.percent, 1)}% das despesas, totalizando ${round(largestCost.value)}.`,
+  });
+  if (expensiveVehicles[0]) insights.push({
+    id: "vehicle-efficiency", priority: "medium", category: "Eficiência", title: `Investigue o custo por KM do veículo ${expensiveVehicles[0].plate}`,
+    description: "Compare consumo, manutenção e tipo de rota com os demais veículos para encontrar a causa do desvio.",
+    evidence: `Custo de ${round(expensiveVehicles[0].costPerKm ?? 0, 2)} por KM contra média de ${round(averageVehicleCost, 2)}.`, action: "maintenance", actionLabel: "Registrar manutenção",
+  });
+  const strongestContract = byContract.find((item) => item.operationalMargin > 0 && item.operationalResult > 0);
+  if (strongestContract) insights.push({
+    id: "profitable-contract", priority: "opportunity", category: "Margem", title: `Use ${strongestContract.contractName} como referência operacional`,
+    description: "Compare rota, veículo, consumo e forma de cobrança com os contratos de menor margem antes de replicar práticas.",
+    evidence: `Margem de ${round(strongestContract.operationalMargin, 1)}% e resultado de ${round(strongestContract.operationalResult)}.`,
+  });
+  if (!insights.length) insights.push({
+    id: "healthy-period", priority: "opportunity", category: "Margem", title: "Indicadores sem desvios relevantes",
+    description: "Mantenha a conciliação de faturamentos, recebimentos e custos antes de fechar o período.",
+    evidence: "As sugestões são recalculadas sempre que os dados ou filtros mudam.",
+  });
 
   const firstDate = earliestDate(dataset);
   let accumulatedBefore = 0;
@@ -598,8 +732,10 @@ export function calculateOperationalResult(datasetInput: OperationalDataset, fil
     byVehicle,
     byContract,
     monthly,
+    billingPipeline,
     costDistribution,
     alerts,
+    insights: insights.slice(0, 6),
     latestMovements,
     details: scoped,
   };

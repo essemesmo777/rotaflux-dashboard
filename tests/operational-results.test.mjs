@@ -102,3 +102,42 @@ test("excedente fica estimado até existir receita aprovada", () => {
   assert.equal(result.totals.estimatedAdditional, 80);
   assert.equal(result.totals.excessKm, 20);
 });
+
+test("dashboard sugere faturar somente com evidência de receita prevista não faturada", () => {
+  const result = calculateOperationalResult(dataset(), filters);
+  assert.equal(result.billingPipeline.predicted, 200000);
+  assert.equal(result.billingPipeline.toBill, 200000);
+  assert.equal(result.billingPipeline.billingRate, 0);
+  assert.equal(result.insights.find((item) => item.id === "invoice-opportunity")?.action, "invoice");
+  assert.equal(result.alerts.find((item) => item.id === "unbilled-revenue")?.metric, 200000);
+});
+
+test("dashboard separa valor a faturar do faturado ainda não recebido", () => {
+  const result = calculateOperationalResult(dataset({
+    invoices: [{ id: "i1", contractId: "c1", reference: "NF-200", periodStart: "2026-08-01", periodEnd: "2026-08-31", issuedOn: "2026-08-05", dueOn: "2026-08-20", amount: 200000, status: "PARTIAL" }],
+    payments: [{ id: "p1", contractId: "c1", invoiceId: "i1", reference: "PIX-150", receivedOn: "2026-08-15", amount: 150000, status: "RECEIVED" }],
+  }), filters);
+  assert.equal(result.billingPipeline.toBill, 0);
+  assert.equal(result.billingPipeline.toCollect, 50000);
+  assert.equal(result.billingPipeline.collectionRate, 75);
+  assert.equal(result.billingPipeline.overdue, 50000);
+  assert.equal(result.alerts.some((item) => item.id === "overdue-invoices"), true);
+  assert.equal(result.insights.find((item) => item.id === "collection-opportunity")?.action, "payment");
+});
+
+test("dashboard prioriza margem negativa e aponta o maior custo", () => {
+  const result = calculateOperationalResult(dataset({
+    refuelings: [{ id: "f1", routeId: "r1", date: "2026-08-10", stationName: "Posto", plate: "ABC-1D23", driver: "Ana", odometer: 1050, liters: 500, pricePerLiter: 6, amountPaid: 3000 }],
+  }), filters);
+  assert.equal(result.alerts[0].id, "negative-margin");
+  assert.equal(result.insights.some((item) => item.id === "recover-margin"), true);
+  assert.match(result.insights.find((item) => item.id === "largest-cost")?.title ?? "", /combustível/i);
+});
+
+test("dashboard orienta cadastro quando não há contratos e mantém gráficos vazios úteis", () => {
+  const result = calculateOperationalResult(dataset({ contracts: [], routes: [] }), filters);
+  assert.equal(result.insights[0].id, "create-contract");
+  assert.equal(result.insights[0].action, "contract");
+  assert.equal(result.monthly.length, 1);
+  assert.equal(result.monthly[0].predicted, 0);
+});
