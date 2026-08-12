@@ -1,11 +1,8 @@
 import { requirePageSession } from "../lib/server-page-auth";
-import LazyFrame from "../components/lazy-frame";
+import OperationalResultsDashboard from "../components/operational-results-dashboard";
+import AuthenticatedLayout from "../components/authenticated-layout";
 
 export default async function Home() {
-  await requirePageSession(["COMPANY_ADMIN"]);
-  return (
-    <main className="site-shell">
-      <LazyFrame source="/dashboard.html" title="Dashboard OperBase" />
-    </main>
-  );
+  const session = await requirePageSession(["COMPANY_ADMIN"]);
+  return <AuthenticatedLayout userRole={session.profile.role} userName={session.profile.name} currentPath="/" currentLabel="Dashboard"><OperationalResultsDashboard variant="dashboard" /></AuthenticatedLayout>;
 }

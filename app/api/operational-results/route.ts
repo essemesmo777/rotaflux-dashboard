@@ -16,6 +16,8 @@ export async function GET(request: Request) {
     startDate: validDate(url.searchParams.get("startDate"), `${month}-01`),
     endDate: validDate(url.searchParams.get("endDate"), now.toISOString().slice(0, 10)),
     contractId: url.searchParams.get("contractId") || undefined,
+    contractorId: url.searchParams.get("contractorId") || undefined,
+    line: url.searchParams.get("line") || undefined,
     route: url.searchParams.get("route") || undefined,
     vehicle: url.searchParams.get("vehicle") || undefined,
     driver: url.searchParams.get("driver") || undefined,

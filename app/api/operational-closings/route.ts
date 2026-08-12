@@ -22,8 +22,17 @@ export async function POST(request: Request) {
     const payload = await request.json() as Record<string, unknown>;
     const startDate = String(payload.startDate ?? ""); const endDate = String(payload.endDate ?? "");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate) || endDate < startDate) throw new Error("Período de fechamento inválido.");
-    const filters = { startDate, endDate, contractId: String(payload.contractId || "") || undefined, route: String(payload.route || "") || undefined, vehicle: String(payload.vehicle || "") || undefined, driver: String(payload.driver || "") || undefined };
-    const snapshot = await operationalResultFor(auth.session.token, auth.session.profile.organization_id, filters);
+    const filters = {
+      startDate,
+      endDate,
+      contractId: String(payload.contractId || "") || undefined,
+      contractorId: String(payload.contractorId || "") || undefined,
+      line: String(payload.line || "") || undefined,
+      route: String(payload.route || "") || undefined,
+      vehicle: String(payload.vehicle || "") || undefined,
+      driver: String(payload.driver || "") || undefined,
+    };
+    const snapshot = await operationalResultFor(auth.session.token, auth.session.profile.organization_id, filters, { preferSnapshot: false });
     const totals = snapshot.totals;
     const previous = await supabaseFetch(`/rest/v1/operational_closings?organization_id=eq.${encodeURIComponent(auth.session.profile.organization_id)}&period_start=eq.${startDate}&period_end=eq.${endDate}&contract_id=${filters.contractId ? `eq.${encodeURIComponent(filters.contractId)}` : "is.null"}&select=revision&order=revision.desc&limit=1`, { token: auth.session.token });
     const revisions = previous.ok ? await previous.json() as Array<{ revision: number }> : [];
