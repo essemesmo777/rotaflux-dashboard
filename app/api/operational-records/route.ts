@@ -1,4 +1,5 @@
-import { canManageCompany, requireSession, responseError, supabaseFetch } from "../../../lib/supabase-rest";
+import { contractWriteRecord } from "../../../lib/contract-lifecycle";
+import { canManageCompany, getAssignableContract, requireSession, responseError, supabaseFetch } from "../../../lib/supabase-rest";
 
 type Resource = "contractor" | "contract" | "maintenance" | "expense" | "revenue" | "invoice" | "payment" | "settings";
 type Payload = Record<string, unknown>;
@@ -63,17 +64,7 @@ function record(resource: Resource, payload: Payload) {
     email: optional(payload.email), phone: optional(payload.phone), status: enumeration(payload.status || "ACTIVE", ["ACTIVE", "INACTIVE"] as const, "Status"),
   };
   if (resource === "contract") {
-    const startDate = date(payload.startDate, "a data inicial do contrato");
-    const endDate = optional(payload.endDate);
-    if (endDate && endDate < startDate) throw new Error("A data final não pode ser anterior à inicial.");
-    return {
-      contractor_id: required(payload.contractorId, "O contratante"), name: required(payload.name, "O nome do contrato"), code: optional(payload.code),
-      line_name: optional(payload.lineName), revenue_model: enumeration(payload.revenueModel, ["PER_KM", "FIXED_MONTHLY", "FIXED_PLUS_EXCESS", "MANUAL_CUSTOM"] as const, "Modelo de receita"),
-      monthly_value: number(payload.monthlyValue), included_km: number(payload.includedKm), price_per_km: number(payload.pricePerKm),
-      excess_price_per_km: number(payload.excessPricePerKm), provision_mode: enumeration(payload.provisionMode || "NONE", ["NONE", "PERCENT_REVENUE", "PER_KM", "FIXED_MONTHLY"] as const, "Modelo da provisão"),
-      provision_value: number(payload.provisionValue), start_date: startDate, end_date: endDate,
-      status: enumeration(payload.status || "ACTIVE", ["ACTIVE", "INACTIVE"] as const, "Status"),
-    };
+    return contractWriteRecord(payload);
   }
   if (resource === "maintenance") return {
     contract_id: optional(payload.contractId), route_id: optional(payload.routeId), vehicle_plate: required(payload.vehiclePlate, "A placa").toUpperCase(),
@@ -133,6 +124,29 @@ async function sessionFor(request: Request) {
   return { session } as const;
 }
 
+async function ensureWritableLinks(
+  session: NonNullable<Awaited<ReturnType<typeof requireSession>>>,
+  resource: Resource,
+  row: Record<string, unknown>,
+) {
+  if (["contractor", "contract", "settings"].includes(resource)) return;
+  let contractId = String(row.contract_id ?? "");
+  const routeId = String(row.route_id ?? "");
+  if (routeId) {
+    const routeResponse = await supabaseFetch(
+      `/rest/v1/routes?id=eq.${encodeURIComponent(routeId)}&organization_id=eq.${encodeURIComponent(session.profile.organization_id)}&select=id,contract_id`,
+      { token: session.token },
+    );
+    if (!routeResponse.ok) throw new Error(await responseError(routeResponse, "Não foi possível validar a operação vinculada."));
+    const [route] = await routeResponse.json() as Array<{ id: string; contract_id: string | null }>;
+    if (!route) throw new Error("A operação vinculada não pertence à empresa.");
+    contractId ||= String(route.contract_id ?? "");
+  }
+  if (!contractId) return;
+  const contract = await getAssignableContract(session.token, session.profile.organization_id, contractId);
+  if (!contract) throw new Error("O contrato informado está inativo, encerrado, excluído ou não pertence à empresa.");
+}
+
 export async function GET(request: Request) {
   const auth = await sessionFor(request);
   if ("error" in auth) return auth.error;
@@ -141,7 +155,8 @@ export async function GET(request: Request) {
     const table = resources[resource];
     const organization = encodeURIComponent(auth.session.profile.organization_id);
     const order = resource === "settings" ? "updated_at.desc" : "created_at.desc";
-    const response = await supabaseFetch(`/rest/v1/${table}?organization_id=eq.${organization}&select=*&order=${order}&limit=5000`, { token: auth.session.token });
+    const activeFilter = resource === "contract" ? "&deleted_at=is.null" : "";
+    const response = await supabaseFetch(`/rest/v1/${table}?organization_id=eq.${organization}${activeFilter}&select=*&order=${order}&limit=5000`, { token: auth.session.token });
     if (!response.ok) return Response.json({ error: await responseError(response, "Não foi possível carregar os lançamentos.") }, { status: 500 });
     return Response.json({ records: await response.json() });
   } catch (error) {
@@ -157,6 +172,7 @@ export async function POST(request: Request) {
     const resource = resourceOf(request, payload);
     const common = resource === "settings" ? { updated_by: auth.session.user.id, updated_at: new Date().toISOString() } : { created_by: auth.session.user.id };
     const body = { ...record(resource, payload), ...common, organization_id: auth.session.profile.organization_id };
+    await ensureWritableLinks(auth.session, resource, body);
     const suffix = resource === "settings" ? "?on_conflict=organization_id" : "";
     const response = await supabaseFetch(`/rest/v1/${resources[resource]}${suffix}`, {
       method: "POST", token: auth.session.token,
@@ -181,7 +197,9 @@ export async function PATCH(request: Request) {
     const id = required(payload.id, "O identificador");
     const organization = encodeURIComponent(auth.session.profile.organization_id);
     const body = { ...record(resource, payload), updated_at: new Date().toISOString() };
-    const response = await supabaseFetch(`/rest/v1/${resources[resource]}?id=eq.${encodeURIComponent(id)}&organization_id=eq.${organization}`, {
+    await ensureWritableLinks(auth.session, resource, body);
+    const activeFilter = resource === "contract" ? "&deleted_at=is.null" : "";
+    const response = await supabaseFetch(`/rest/v1/${resources[resource]}?id=eq.${encodeURIComponent(id)}&organization_id=eq.${organization}${activeFilter}`, {
       method: "PATCH", token: auth.session.token, headers: { "Content-Type": "application/json", Prefer: "return=representation" }, body: JSON.stringify(body),
     });
     if (!response.ok) return Response.json({ error: await responseError(response, "Não foi possível atualizar o lançamento.") }, { status: 400 });

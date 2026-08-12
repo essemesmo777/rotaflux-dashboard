@@ -15,12 +15,14 @@ export function navigationItemsForRole(role: AppRole): AuthenticatedNavigationIt
   if (role === "SUPER_ADMIN") return [
     { href: "/admin", label: "Dashboard administrativa" },
     { href: "/resultado-operacional", label: "Resultado Operacional" },
+    { href: "/contratos", label: "Contratos" },
   ];
   if (role === "DRIVER") return [{ href: "/motorista", label: "Minhas rotas" }];
   return [
     { href: "/", label: "Dashboard" },
     { href: "/operacoes", label: "Operações" },
     { href: "/resultado-operacional", label: "Resultado Operacional" },
+    { href: "/contratos", label: "Contratos" },
     { href: "/usuarios", label: "Motoristas" },
   ];
 }

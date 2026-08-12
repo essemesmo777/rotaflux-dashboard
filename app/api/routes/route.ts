@@ -2,6 +2,7 @@ import { normalizeRoute } from "../../../lib/route-normalize";
 import {
   getAssignableDriver,
   getAssignableDriverByAuthUser,
+  getAssignableContract,
   listAssignableDrivers,
   requireSession,
   responseError,
@@ -91,6 +92,15 @@ async function resolveDriver(
   return driver;
 }
 
+async function validateContract(
+  session: NonNullable<Awaited<ReturnType<typeof authenticated>>>,
+  contractId: string | null,
+) {
+  if (!contractId) return;
+  const contract = await getAssignableContract(session.token, session.profile.organization_id, contractId);
+  if (!contract) throw new Error("O contrato informado não pertence à empresa, está inativo, encerrado ou excluído.");
+}
+
 export async function GET(request: Request) {
   const session = await authenticated(request);
   if (!session) return Response.json({ error: "Sessão expirada." }, { status: 401 });
@@ -102,7 +112,7 @@ export async function GET(request: Request) {
     ? await listAssignableDrivers(session.token, session.profile.organization_id)
     : [];
   const contractResponse = ["SUPER_ADMIN", "COMPANY_ADMIN"].includes(session.profile.role)
-    ? await supabaseFetch(`/rest/v1/contracts?organization_id=eq.${encodeURIComponent(session.profile.organization_id)}&status=eq.ACTIVE&select=id,name,code,line_name&order=name`, { token: session.token })
+    ? await supabaseFetch(`/rest/v1/contracts?organization_id=eq.${encodeURIComponent(session.profile.organization_id)}&status=eq.ACTIVE&deleted_at=is.null&select=id,name,code,line_name&order=name`, { token: session.token })
     : null;
   const contracts = contractResponse?.ok ? await contractResponse.json() : [];
   return Response.json({ routes: ((await response.json()) as DbRoute[]).map(toClient), drivers, contracts });
@@ -115,6 +125,7 @@ export async function POST(request: Request) {
     const payload = (await request.json()) as Record<string, unknown>;
     const driver = await resolveDriver(session, payload);
     const record = normalizeRoute({ ...payload, driver: driver.name, driverId: driver.id, driverUserId: driver.auth_user_id });
+    await validateContract(session, record.contractId);
     const response = await supabaseFetch("/rest/v1/routes", {
       method: "POST",
       token: session.token,
@@ -138,6 +149,7 @@ export async function PATCH(request: Request) {
     if (!id) return Response.json({ error: "Identificador da rota ausente." }, { status: 400 });
     const driver = await resolveDriver(session, payload);
     const record = normalizeRoute({ ...payload, driver: driver.name, driverId: driver.id, driverUserId: driver.auth_user_id }, { id });
+    await validateContract(session, record.contractId);
     const database = toDatabase(record, session.profile.organization_id, session.user.id);
     delete (database as Partial<typeof database>).id;
     delete (database as Partial<typeof database>).import_id;

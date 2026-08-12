@@ -9,6 +9,7 @@ import {
 import {
   getAssignableDriver,
   getAssignableDriverByAuthUser,
+  getAssignableContract,
   listAssignableDrivers,
   requireSession,
   responseError,
@@ -129,9 +130,18 @@ async function resolveDriver(
   return driver;
 }
 
+async function validateContract(
+  session: NonNullable<Awaited<ReturnType<typeof requireSession>>>,
+  contractId: string | null,
+) {
+  if (!contractId) return;
+  const contract = await getAssignableContract(session.token, session.profile.organization_id, contractId);
+  if (!contract) throw new Error("O contrato informado não pertence à empresa, está inativo, encerrado ou excluído.");
+}
+
 async function listContracts(token: string, organizationId: string, role: string) {
   if (!['SUPER_ADMIN', 'COMPANY_ADMIN'].includes(role)) return [];
-  const response = await supabaseFetch(`/rest/v1/contracts?organization_id=eq.${encodeURIComponent(organizationId)}&status=eq.ACTIVE&select=id,name,code,line_name&order=name`, { token });
+  const response = await supabaseFetch(`/rest/v1/contracts?organization_id=eq.${encodeURIComponent(organizationId)}&status=eq.ACTIVE&deleted_at=is.null&select=id,name,code,line_name&order=name`, { token });
   return response.ok ? await response.json() : [];
 }
 
@@ -179,6 +189,7 @@ export async function POST(request: Request) {
       driverId: driver.id,
       driverUserId: driver.auth_user_id,
     }, { source: "MANUAL" });
+    await validateContract(session, record.contractId);
     const duplicate = await findDuplicate(session.token, record);
     if (duplicate && !record.duplicateOverride) {
       return Response.json(
@@ -238,6 +249,7 @@ export async function PATCH(request: Request) {
       importId: current.import_id ? String(current.import_id) : null,
       source,
     });
+    await validateContract(session, record.contractId);
     const duplicate = await findDuplicate(session.token, record, id);
     if (duplicate && !record.duplicateOverride) {
       return Response.json(

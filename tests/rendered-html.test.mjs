@@ -210,3 +210,35 @@ test("protects and integrates the operational result module", async () => {
   assert.match(dashboard, /Últimas movimentações/);
   for (const sheet of ["Resumo", "Receitas", "Combustivel", "Manutencao", "Despesas", "Veiculos", "Contratos"]) assert.match(dashboard, new RegExp(`add\\("${sheet}"`));
 });
+
+test("protects the contract lifecycle and keeps deletion non-destructive", async () => {
+  const [migration, api, component, navigation, server, operations, routes] = await Promise.all([
+    readFile(new URL("../supabase/migrations/20260812010058_contract_lifecycle_management.sql", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/contracts/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../components/contracts-management.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/auth-navigation.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/operational-results-server.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/operations/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/routes/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(migration, /add column deleted_at/);
+  assert.match(migration, /add column deleted_by/);
+  assert.match(migration, /CONTRACT_DELETED/);
+  assert.match(migration, /CONTRACT_RESTORED/);
+  assert.match(migration, /CONTRACT_PERMANENTLY_DELETED/);
+  assert.match(migration, /create policy contracts_delete/);
+  assert.doesNotMatch(migration, /on delete cascade/i);
+  assert.match(api, /organization_id=eq/);
+  assert.match(api, /contractReferenceBlockers/);
+  assert.match(api, /deleted_at=not\.is\.null/);
+  assert.match(api, /Acesso a contratos restrito aos administradores/);
+  assert.match(component, /Excluir este contrato/);
+  assert.match(component, /Lixeira/);
+  assert.match(component, /Restaurar contrato/);
+  assert.match(component, /Duplicar contrato/);
+  assert.match(component, /operbase:contracts-changed/);
+  assert.match(navigation, /href: "\/contratos"/);
+  assert.match(server, /deleted_at=is\.null/);
+  assert.match(operations, /deleted_at=is\.null/);
+  assert.match(routes, /deleted_at=is\.null/);
+});
