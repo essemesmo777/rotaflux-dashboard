@@ -14,6 +14,7 @@ export function homePathForRole(role: AppRole) {
 export function navigationItemsForRole(role: AppRole): AuthenticatedNavigationItem[] {
   if (role === "SUPER_ADMIN") return [
     { href: "/admin", label: "Dashboard administrativa" },
+    { href: "/lancamentos", label: "Cadastros e Lançamentos" },
     { href: "/resultado-operacional", label: "Resultado Operacional" },
     { href: "/contratos", label: "Contratos" },
     { href: "/ajuda", label: "Ajuda / Como usar" },
@@ -24,6 +25,7 @@ export function navigationItemsForRole(role: AppRole): AuthenticatedNavigationIt
   ];
   return [
     { href: "/", label: "Dashboard" },
+    { href: "/lancamentos", label: "Cadastros e Lançamentos" },
     { href: "/operacoes", label: "Operações" },
     { href: "/resultado-operacional", label: "Resultado Operacional" },
     { href: "/contratos", label: "Contratos" },
