@@ -13,10 +13,14 @@ test("maps each authenticated role to its own dashboard", () => {
   assert.equal(homePathForRole("SUPER_ADMIN"), "/admin");
   assert.equal(homePathForRole("COMPANY_ADMIN"), "/");
   assert.equal(homePathForRole("DRIVER"), "/motorista");
-  assert.deepEqual(navigationItemsForRole("DRIVER"), [{ href: "/motorista", label: "Minhas rotas" }]);
+  assert.deepEqual(navigationItemsForRole("DRIVER"), [
+    { href: "/motorista", label: "Minhas rotas" },
+    { href: "/ajuda", label: "Ajuda / Como usar" },
+  ]);
   assert.ok(navigationItemsForRole("COMPANY_ADMIN").some((item) => item.href === "/operacoes"));
   assert.ok(navigationItemsForRole("COMPANY_ADMIN").some((item) => item.href === "/resultado-operacional"));
   assert.ok(navigationItemsForRole("SUPER_ADMIN").some((item) => item.href === "/resultado-operacional"));
+  for (const role of ["DRIVER", "COMPANY_ADMIN", "SUPER_ADMIN"]) assert.ok(navigationItemsForRole(role).some((item) => item.href === "/ajuda"));
 });
 
 test("keeps dashboard, logo, breadcrumbs and cancel separate from logout", async () => {

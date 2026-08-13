@@ -16,13 +16,18 @@ export function navigationItemsForRole(role: AppRole): AuthenticatedNavigationIt
     { href: "/admin", label: "Dashboard administrativa" },
     { href: "/resultado-operacional", label: "Resultado Operacional" },
     { href: "/contratos", label: "Contratos" },
+    { href: "/ajuda", label: "Ajuda / Como usar" },
   ];
-  if (role === "DRIVER") return [{ href: "/motorista", label: "Minhas rotas" }];
+  if (role === "DRIVER") return [
+    { href: "/motorista", label: "Minhas rotas" },
+    { href: "/ajuda", label: "Ajuda / Como usar" },
+  ];
   return [
     { href: "/", label: "Dashboard" },
     { href: "/operacoes", label: "Operações" },
     { href: "/resultado-operacional", label: "Resultado Operacional" },
     { href: "/contratos", label: "Contratos" },
     { href: "/usuarios", label: "Motoristas" },
+    { href: "/ajuda", label: "Ajuda / Como usar" },
   ];
 }

@@ -35,6 +35,10 @@ test("server-enforces private OperBase routes and renders public access pages", 
   assert.equal(operations.status, 307);
   assert.equal(new URL(operations.headers.get("location"), "http://localhost").pathname, "/login");
 
+  const help = await render("/ajuda");
+  assert.equal(help.status, 307);
+  assert.equal(new URL(help.headers.get("location"), "http://localhost").pathname, "/login");
+
   const demoOperations = await render("/demo/operacoes");
   assert.equal(demoOperations.status, 200);
   assert.match(await demoOperations.text(), /operations\.html\?demo=1/);
