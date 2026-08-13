@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { calculateRefuelingValues, type RefuelingValueField } from "../../lib/refueling-calculator";
 import MotionPresence from "../../components/motion-presence";
+import ContextualHelp from "../../components/contextual-help";
 
 type Operation = {
   id: string;
@@ -122,7 +123,7 @@ export default function DriverPage() {
   return (
     <main className="driver-page">
       <section className="driver-main">
-        <div className="admin-title"><div><h1>Olá, {name.split(" ")[0]}</h1><p>Aqui aparecem somente as operações atribuídas a você.</p></div></div>
+        <div className="admin-title"><div><h1>Olá, {name.split(" ")[0]}</h1><p>Aqui aparecem somente as operações atribuídas a você.</p></div><ContextualHelp articleId="minhas-rotas-motorista" /></div>
         {error && <div className="form-error" role="alert">{error}</div>}
         {notice && <div className="form-success" role="status">{notice}</div>}
         <MotionPresence open={Boolean(selected)}>

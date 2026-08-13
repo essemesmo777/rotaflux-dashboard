@@ -13,6 +13,14 @@
       "purpose": "Gestão completa de contratos, status, lixeira, restauração, duplicação e exclusão segura"
     },
     {
+      "path": "components/contextual-help.tsx",
+      "purpose": "Ajuda contextual reutilizável, passo a passo e tooltips acessíveis"
+    },
+    {
+      "path": "components/help-center.tsx",
+      "purpose": "Central de Ajuda com busca, guias por perfil, FAQ, atalhos e checklist local"
+    },
+    {
       "path": "components/lazy-frame.tsx",
       "purpose": "Iframe com skeleton, estado de carregamento e transição"
     },

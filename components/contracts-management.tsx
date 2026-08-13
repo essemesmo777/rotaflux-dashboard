@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import MotionBackdrop from "./motion-backdrop";
+import ContextualHelp, { HelpTerm } from "./contextual-help";
 
 type ContractStatus = "ACTIVE" | "INACTIVE" | "CLOSED" | "DELETED";
 type Contractor = { id: string; name: string };
@@ -53,7 +54,7 @@ async function api(path: string, init?: RequestInit) {
   return data;
 }
 
-function Field({ label, children, wide = false }: { label: string; children: React.ReactNode; wide?: boolean }) {
+function Field({ label, children, wide = false }: { label: React.ReactNode; children: React.ReactNode; wide?: boolean }) {
   return <label className={wide ? "wide" : ""}><span>{label}</span>{children}</label>;
 }
 
@@ -88,9 +89,9 @@ function ContractForm({
         <Field label="Modelo de receita *"><select name="revenueModel" defaultValue={contract?.revenueModel || "FIXED_MONTHLY"} required><option value="FIXED_MONTHLY">Fixo mensal</option><option value="PER_KM">Por KM</option><option value="FIXED_PLUS_EXCESS">Fixo + KM excedente</option><option value="MANUAL_CUSTOM">Personalizado</option></select></Field>
         <Field label="Status *"><select name="status" defaultValue={status} required><option value="ACTIVE">Ativo</option><option value="INACTIVE">Inativo</option><option value="CLOSED">Encerrado</option></select></Field>
         <Field label="Valor mensal (R$)"><input name="monthlyValue" type="number" min="0" step="0.01" defaultValue={contract?.monthlyValue ?? 0} /></Field>
-        <Field label="KM contratado"><input name="includedKm" type="number" min="0" step="0.01" defaultValue={contract?.includedKm ?? 0} /></Field>
-        <Field label="Valor por KM (R$)"><input name="pricePerKm" type="number" min="0" step="0.0001" defaultValue={contract?.pricePerKm ?? 0} /></Field>
-        <Field label="KM excedente (R$)"><input name="excessPricePerKm" type="number" min="0" step="0.0001" defaultValue={contract?.excessPricePerKm ?? 0} /></Field>
+        <Field label={<HelpTerm term="KM contratado" description="Franquia de quilômetros incluída no valor ou na regra do contrato." />}><input name="includedKm" type="number" min="0" step="0.01" defaultValue={contract?.includedKm ?? 0} /></Field>
+        <Field label={<HelpTerm term="Valor por KM (R$)" description="Preço aplicado a cada quilômetro quando o modelo de receita é variável." />}><input name="pricePerKm" type="number" min="0" step="0.0001" defaultValue={contract?.pricePerKm ?? 0} /></Field>
+        <Field label={<HelpTerm term="KM excedente (R$)" description="Preço adicional por quilômetro que ultrapassar a franquia contratada." />}><input name="excessPricePerKm" type="number" min="0" step="0.0001" defaultValue={contract?.excessPricePerKm ?? 0} /></Field>
         <Field label="Início *"><input name="startDate" type="date" defaultValue={contract?.startDate || new Date().toISOString().slice(0, 10)} required /></Field>
         <Field label="Fim"><input name="endDate" type="date" defaultValue={contract?.endDate || ""} /></Field>
         <Field label="Modelo da provisão"><select name="provisionMode" defaultValue={contract?.provisionMode || "NONE"}><option value="NONE">Sem provisão</option><option value="PERCENT_REVENUE">% da receita</option><option value="PER_KM">Por KM</option><option value="FIXED_MONTHLY">Fixa mensal</option></select></Field>
@@ -228,7 +229,7 @@ export default function ContractsManagement() {
   }
 
   return <main className="contracts-page">
-    <header className="contracts-title"><div><span className="operational-eyebrow">Gestão financeira</span><h1>Contratos</h1><p>Crie, acompanhe e encerre contratos sem perder o histórico operacional.</p></div><button className="primary-action" type="button" onClick={() => setDialog({ type: "form" })}>+ Novo contrato</button></header>
+    <header className="contracts-title"><div><span className="operational-eyebrow">Gestão financeira</span><h1>Contratos</h1><p>Crie, acompanhe e encerre contratos sem perder o histórico operacional.</p></div><div className="title-actions"><ContextualHelp articleId="gerenciar-contratos" /><button className="primary-action" type="button" onClick={() => setDialog({ type: "form" })}>+ Novo contrato</button></div></header>
 
     <section className="contracts-toolbar" aria-label="Filtros de contratos">
       {scope === "active" ? <div className="contract-status-tabs">{([
