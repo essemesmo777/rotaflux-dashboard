@@ -82,6 +82,7 @@ export default function MotionBackdrop({
     bodyLockCount += 1;
     const focusFrame = requestAnimationFrame(() => {
       const preferred = backdropRef.current?.querySelector<HTMLElement>("[autofocus]")
+        ?? backdropRef.current?.querySelector<HTMLElement>("input:not([disabled]):not([type='hidden']), select:not([disabled]), textarea:not([disabled])")
         ?? backdropRef.current?.querySelector<HTMLElement>(focusableSelector);
       preferred?.focus({ preventScroll: true });
     });
