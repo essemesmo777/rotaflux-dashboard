@@ -54,6 +54,20 @@ test("TESTE 5: receita manual aprovada atualiza receita considerada e resultado"
   assert.equal(result.totals.operationalResult, 5000);
 });
 
+test("TESTE UX: receita de R$ 1.000 e despesa de R$ 500 atualizam cards e gráficos com a mesma fonte", () => {
+  const result = calculateOperationalResult(dataset({
+    revenues: [{ id: "v1", contractId: "c1", routeId: null, vehiclePlate: "", occurredOn: "2026-08-12", origin: "manual_revenue", category: "ADDITIONAL", externalRef: "ux-revenue", description: "Receita de validação", amount: 1000, status: "APPROVED" }],
+    expenses: [{ id: "e1", contractId: "c1", routeId: null, vehiclePlate: "", incurredOn: "2026-08-12", origin: "manual_expense", category: "TOLL", description: "Despesa de validação", amount: 500 }],
+  }), filters);
+  assert.equal(result.totals.received, 1000);
+  assert.equal(result.totals.expenses, 500);
+  assert.equal(result.totals.operationalResult, 500);
+  assert.equal(result.monthly[0].revenue, result.totals.received);
+  assert.equal(result.monthly[0].expenses, result.totals.expenses);
+  assert.equal(result.monthly[0].operationalResult, result.totals.operationalResult);
+  assert.equal(result.costDistribution.find((item) => item.category === "TOLL")?.value, 500);
+});
+
 test("TESTE 6: resumo do Excel usa exatamente os totais do dashboard", () => {
   const result = calculateOperationalResult(dataset({
     invoices: [{ id: "i1", contractId: "c1", reference: "NF", periodStart: "2026-08-01", periodEnd: "2026-08-31", issuedOn: "2026-08-05", dueOn: "2026-08-20", amount: 200000, status: "ISSUED" }],

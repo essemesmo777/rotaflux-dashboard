@@ -18,6 +18,8 @@ test("maps each authenticated role to its own dashboard", () => {
     { href: "/ajuda", label: "Ajuda / Como usar" },
   ]);
   assert.ok(navigationItemsForRole("COMPANY_ADMIN").some((item) => item.href === "/operacoes"));
+  const companyNavigation = navigationItemsForRole("COMPANY_ADMIN");
+  assert.deepEqual(companyNavigation.slice(0, 3).map((item) => item.href), ["/", "/lancamentos", "/operacoes"]);
   assert.ok(navigationItemsForRole("COMPANY_ADMIN").some((item) => item.href === "/resultado-operacional"));
   assert.ok(navigationItemsForRole("SUPER_ADMIN").some((item) => item.href === "/resultado-operacional"));
   for (const role of ["DRIVER", "COMPANY_ADMIN", "SUPER_ADMIN"]) assert.ok(navigationItemsForRole(role).some((item) => item.href === "/ajuda"));

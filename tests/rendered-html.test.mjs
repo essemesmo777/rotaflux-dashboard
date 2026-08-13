@@ -39,6 +39,10 @@ test("server-enforces private OperBase routes and renders public access pages", 
   assert.equal(help.status, 307);
   assert.equal(new URL(help.headers.get("location"), "http://localhost").pathname, "/login");
 
+  const records = await render("/lancamentos");
+  assert.equal(records.status, 307);
+  assert.equal(new URL(records.headers.get("location"), "http://localhost").pathname, "/login");
+
   const demoOperations = await render("/demo/operacoes");
   assert.equal(demoOperations.status, 200);
   assert.match(await demoOperations.text(), /operations\.html\?demo=1/);
@@ -168,12 +172,17 @@ test("keeps documents and calculated daily trips in isolated Supabase storage", 
 });
 
 test("protects and integrates the operational result module", async () => {
-  const [migration, financialMigration, financialIndexes, page, dashboard, resultApi, recordsApi, closingsApi, server, operationalResultsLogic] = await Promise.all([
+  const [migration, financialMigration, financialIndexes, page, dashboard, financialCharts, recordsPage, recordsLayout, modal, navigation, resultApi, recordsApi, closingsApi, server, operationalResultsLogic] = await Promise.all([
     readFile(new URL("../supabase/migrations/20260811224404_operational_results_foundation.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/20260812000233_integrated_financial_dashboard.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/20260812002824_integrated_financial_dashboard_indexes.sql", import.meta.url), "utf8"),
     readFile(new URL("../app/resultado-operacional/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/operational-results-dashboard.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/financial-charts.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/lancamentos/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/lancamentos/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/motion-backdrop.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/auth-navigation.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/operational-results/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/operational-records/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/operational-closings/route.ts", import.meta.url), "utf8"),
@@ -212,14 +221,24 @@ test("protects and integrates the operational result module", async () => {
   assert.match(server, /historical\.details/);
   assert.match(dashboard, /OperBase_resultado_/);
   assert.match(dashboard, /Dashboard financeiro/);
-  assert.match(dashboard, /Previsto, faturado, recebido e custos/);
+  assert.match(dashboard, /FinancialCharts/);
   assert.match(dashboard, /Funil de faturamento/);
   assert.match(dashboard, /Insights acionáveis/);
   assert.match(dashboard, /Alertas priorizados/);
   assert.match(dashboard, /Valide documentos e regras do contrato antes de agir/);
   assert.match(operationalResultsLogic, /billingPipeline/);
   assert.match(operationalResultsLogic, /invoice-opportunity/);
-  assert.match(dashboard, /Distribuição dos custos/);
+  assert.match(financialCharts, /Entradas x Saídas/);
+  assert.match(financialCharts, /Evolução do Resultado/);
+  assert.match(financialCharts, /Onde estou gastando\?/);
+  assert.match(financialCharts, /operbase:dashboard:financial-charts/);
+  assert.match(recordsPage, /variant="records"/);
+  assert.match(recordsLayout, /SUPER_ADMIN/);
+  assert.match(recordsLayout, /COMPANY_ADMIN/);
+  assert.match(navigation, /href: "\/lancamentos"/);
+  assert.match(modal, /createPortal/);
+  assert.match(modal, /document\.body\.style\.overflow = "hidden"/);
+  assert.match(modal, /triggerRef\.current\?\.focus/);
   assert.match(dashboard, /Últimas movimentações/);
   for (const sheet of ["Resumo", "Receitas", "Combustivel", "Manutencao", "Despesas", "Veiculos", "Contratos"]) assert.match(dashboard, new RegExp(`add\\("${sheet}"`));
 });

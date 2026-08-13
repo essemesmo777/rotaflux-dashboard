@@ -1,22 +1,40 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 type MotionBackdropProps = {
   open: boolean;
   className?: string;
   children: ReactNode;
   onDismiss?: () => void;
+  dismissOnBackdrop?: boolean;
 };
+
+let bodyLockCount = 0;
+let previousBodyOverflow = "";
+let previousBodyPaddingRight = "";
+
+const focusableSelector = [
+  "button:not([disabled])",
+  "[href]",
+  "input:not([disabled]):not([type='hidden'])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(",");
 
 export default function MotionBackdrop({
   open,
   className = "modal-backdrop",
   children,
   onDismiss,
+  dismissOnBackdrop = false,
 }: MotionBackdropProps) {
   const [mounted, setMounted] = useState(open);
   const [phase, setPhase] = useState<"opening" | "open" | "closing">(open ? "open" : "opening");
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -51,14 +69,65 @@ export default function MotionBackdrop({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [onDismiss, open]);
 
-  if (!mounted) return null;
+  useEffect(() => {
+    if (!mounted) return;
+    triggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (bodyLockCount === 0) {
+      previousBodyOverflow = document.body.style.overflow;
+      previousBodyPaddingRight = document.body.style.paddingRight;
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      document.body.style.overflow = "hidden";
+      if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+    bodyLockCount += 1;
+    const focusFrame = requestAnimationFrame(() => {
+      const preferred = backdropRef.current?.querySelector<HTMLElement>("[autofocus]")
+        ?? backdropRef.current?.querySelector<HTMLElement>(focusableSelector);
+      preferred?.focus({ preventScroll: true });
+    });
+    return () => {
+      cancelAnimationFrame(focusFrame);
+      bodyLockCount = Math.max(0, bodyLockCount - 1);
+      if (bodyLockCount === 0) {
+        document.body.style.overflow = previousBodyOverflow;
+        document.body.style.paddingRight = previousBodyPaddingRight;
+      }
+      triggerRef.current?.focus({ preventScroll: true });
+    };
+  }, [mounted]);
 
-  return (
+  function trapFocus(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (event.key !== "Tab") return;
+    const focusable = [...(backdropRef.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? [])];
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable.at(-1)!;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function dismissFromBackdrop(event: MouseEvent<HTMLDivElement>) {
+    if (dismissOnBackdrop && event.target === event.currentTarget) onDismiss?.();
+  }
+
+  if (!mounted || typeof document === "undefined") return null;
+
+  return createPortal(
     <div
+      ref={backdropRef}
       className={`${className} motion-backdrop`}
       data-motion-phase={phase}
+      role="presentation"
+      onKeyDown={trapFocus}
+      onMouseDown={dismissFromBackdrop}
     >
       {children}
-    </div>
+    </div>,
+    document.body,
   );
 }
