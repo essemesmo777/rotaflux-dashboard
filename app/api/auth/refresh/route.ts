@@ -12,14 +12,16 @@ function safeReturnTo(request: Request) {
   return candidate.startsWith("/") && !candidate.startsWith("//") ? candidate : "/";
 }
 
-function redirectWithHeaders(request: Request, path: string, headers: Headers) {
-  headers.set("Location", new URL(path, request.url).toString());
+function redirectWithHeaders(path: string, headers: Headers) {
+  // A relative Location keeps authentication on the public host even when the
+  // application runtime is reached through Vercel's external-origin rewrite.
+  headers.set("Location", path);
   return new Response(null, { status: 303, headers });
 }
 
 export async function GET(request: Request) {
   const refreshToken = readCookie(request, "rotaflux_refresh");
-  if (!refreshToken) return redirectWithHeaders(request, "/login", new Headers());
+  if (!refreshToken) return redirectWithHeaders("/login", new Headers());
 
   const response = await supabaseFetch("/auth/v1/token?grant_type=refresh_token", {
     method: "POST",
@@ -30,7 +32,7 @@ export async function GET(request: Request) {
   if (!response.ok) {
     const headers = new Headers();
     appendClearedSessionCookies(headers, request);
-    return redirectWithHeaders(request, "/login", headers);
+    return redirectWithHeaders("/login", headers);
   }
 
   const session = (await response.json()) as AuthSession;
@@ -40,10 +42,10 @@ export async function GET(request: Request) {
   if (!active) {
     const headers = new Headers();
     appendClearedSessionCookies(headers, request);
-    return redirectWithHeaders(request, "/login", headers);
+    return redirectWithHeaders("/login", headers);
   }
 
   const headers = new Headers();
   appendSessionCookies(headers, request, session);
-  return redirectWithHeaders(request, safeReturnTo(request), headers);
+  return redirectWithHeaders(safeReturnTo(request), headers);
 }

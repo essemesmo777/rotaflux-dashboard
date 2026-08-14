@@ -68,7 +68,8 @@ Termos de Uso e Política de Privacidade só podem ser marcados como aprovados q
 - Autenticação e dados: Supabase, com sessão em cookies HttpOnly e isolamento por organização.
 - Projeto Supabase: `gcqohezznnfrqnxzackb`.
 - Projeto Sites: `appgprj_6a74f426ea84819185a0795e36524cdc`.
-- URL de produção: `https://rotaflux-gestao-rotas.augustonanbrum.chatgpt.site`.
+- Domínio público principal: `https://rotaflux-dashboard.vercel.app`.
+- Origem e runtime de produção: `https://rotaflux-gestao-rotas.augustonanbrum.chatgpt.site`.
 - Arquivo de hospedagem: `.openai/hosting.json`.
 - Última versão confirmada no momento deste documento: Sites 13.
 - Commit de produção confirmado: `1585ff2f660578f7b2cdd095ab0a5dcb2b66cf21`.
@@ -94,6 +95,18 @@ Antes de publicar, consultar o estado atual do GitHub e do Sites; os números ac
 6. Gerar o build e empacotar o artefato a partir desse mesmo commit.
 7. Salvar uma nova versão vinculada ao SHA exato e só então fazer o deploy.
 8. Acompanhar o deployment até `succeeded` e validar a produção.
+
+## Publicação e domínio na Vercel
+
+1. A Vercel funciona como domínio público, CDN e reverse proxy; o runtime, autenticação, dados e arquivos continuam no Sites até existir uma Issue específica de migração nativa.
+2. O projeto Vercel vinculado ao GitHub é `augustos-projects-36395e36/rotaflux-dashboard`.
+3. `vercel.json` deve permanecer sem segredos, sem build duplicado e com rewrite externo para a origem de produção vigente.
+4. Não habilitar cache para páginas autenticadas ou APIs. Qualquer estratégia futura de cache exige análise por rota e critérios próprios na Issue.
+5. Pull Requests geram previews automaticamente. O preview deve ser validado antes do merge, usando a proteção da Vercel sem desativá-la.
+6. O deploy de produção é disparado somente pelo commit mesclado em `main`; confirmar o SHA no GitHub e na Vercel.
+7. O domínio `rotaflux-dashboard.vercel.app` deve apontar para o deployment de produção e permitir acesso público. Previews podem continuar protegidos.
+8. Validar pelo domínio Vercel: página inicial, login, redirecionamento de sessão, rota interna, API pública segura e recuperação de senha.
+9. O domínio da origem deve continuar funcional como rollback. Uma indisponibilidade da origem também afeta o domínio Vercel enquanto o reverse proxy estiver em uso.
 
 ## Segurança e limites
 

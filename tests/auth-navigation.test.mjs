@@ -5,6 +5,7 @@ import test from "node:test";
 import { homePathForRole, navigationItemsForRole } from "../lib/auth-navigation.ts";
 import { appendClearedSessionCookies } from "../lib/supabase-rest.ts";
 import { POST as logoutSession } from "../app/api/auth/logout/route.ts";
+import { POST as recoverPassword } from "../app/api/auth/recover/route.ts";
 import { GET as refreshPageSession } from "../app/api/auth/refresh/route.ts";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
@@ -126,7 +127,7 @@ test("executes logout and refresh flows against Supabase without mixing them wit
       headers: { cookie: "rotaflux_refresh=valid-refresh" },
     }));
     assert.equal(refreshed.status, 303);
-    assert.equal(new URL(refreshed.headers.get("location")).pathname, "/usuarios");
+    assert.equal(refreshed.headers.get("location"), "/usuarios");
     assert.match(refreshed.headers.get("set-cookie") || "", /rotaflux_access=new-access/);
 
     const loggedOut = await logoutSession(new Request("https://rotaflux.test/api/auth/logout", {
@@ -136,6 +137,41 @@ test("executes logout and refresh flows against Supabase without mixing them wit
     assert.equal(loggedOut.status, 200);
     assert.match(loggedOut.headers.get("set-cookie") || "", /Max-Age=0/);
     assert.ok(calls.some((url) => url.endsWith("/auth/v1/logout")));
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalUrl === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = originalUrl;
+    if (originalKey === undefined) delete process.env.SUPABASE_PUBLISHABLE_KEY; else process.env.SUPABASE_PUBLISHABLE_KEY = originalKey;
+  }
+});
+
+test("keeps password recovery on the allowlisted Vercel production host", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalUrl = process.env.SUPABASE_URL;
+  const originalKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+  const calls = [];
+  process.env.SUPABASE_URL = "https://project.supabase.test";
+  process.env.SUPABASE_PUBLISHABLE_KEY = "publishable-test";
+  globalThis.fetch = async (input) => {
+    calls.push(String(input));
+    return Response.json({});
+  };
+
+  try {
+    const response = await recoverPassword(new Request("https://rotaflux-gestao-rotas.augustonanbrum.chatgpt.site/api/auth/recover", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-forwarded-host": "rotaflux-dashboard.vercel.app",
+      },
+      body: JSON.stringify({ email: "gestor@example.com" }),
+    }));
+
+    assert.equal(response.status, 200);
+    const recoveryUrl = new URL(calls[0]);
+    assert.equal(
+      recoveryUrl.searchParams.get("redirect_to"),
+      "https://rotaflux-dashboard.vercel.app/change-password?recovery=1",
+    );
   } finally {
     globalThis.fetch = originalFetch;
     if (originalUrl === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = originalUrl;
