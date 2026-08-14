@@ -238,6 +238,7 @@ test("protects and integrates the operational result module", async () => {
   assert.match(navigation, /href: "\/lancamentos"/);
   assert.match(modal, /createPortal/);
   assert.match(modal, /document\.body\.style\.overflow = "hidden"/);
+  assert.match(modal, /input:not\(\[disabled\]\):not\(\[type='hidden'\]\), select:not\(\[disabled\]\), textarea:not\(\[disabled\]\)/);
   assert.match(modal, /triggerRef\.current\?\.focus/);
   assert.match(dashboard, /Últimas movimentações/);
   for (const sheet of ["Resumo", "Receitas", "Combustivel", "Manutencao", "Despesas", "Veiculos", "Contratos"]) assert.match(dashboard, new RegExp(`add\\("${sheet}"`));
